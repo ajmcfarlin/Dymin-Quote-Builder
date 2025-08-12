@@ -1,0 +1,170 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  password  String
+  quotes    Quote[]
+  createdAt DateTime @default(now())
+}
+
+model Quote {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
+  customerName String
+  quoteData    Json
+  totalCost    Float
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Configuration {
+  id     String @id @default(cuid())
+  name   String @unique
+  config Json
+}
+
+// HaloPSA Sync Models
+model HaloTeam {
+  id          String      @id @default(cuid())
+  haloId      Int         @unique
+  name        String
+  ticketCount Int         @default(0)
+  isActive    Boolean     @default(true)
+  agents      HaloAgent[]
+  teamCostAnalysis TeamCostAnalysis[]
+  syncedAt    DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+model HaloAgent {
+  id           String    @id @default(cuid())
+  haloId       Int       @unique
+  name         String
+  email        String?
+  level        Int       @default(2) // 1=Junior, 2=Intermediate, 3=Senior
+  costPerHour  Float     @default(0)
+  isActive     Boolean   @default(true)
+  departmentId Int?
+  teamId       String?
+  team         HaloTeam? @relation(fields: [teamId], references: [id])
+  rawData      Json      // Store full agent data from HaloPSA
+  syncedAt     DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model HaloSyncLog {
+  id            String   @id @default(cuid())
+  syncType      String   // 'teams', 'agents', 'full'
+  status        String   // 'success', 'error', 'partial'
+  recordsSync   Int      @default(0)
+  errorMessage  String?
+  syncData      Json?    // Store summary data
+  syncedAt      DateTime @default(now())
+}
+
+model TeamCostAnalysis {
+  id             String   @id @default(cuid())
+  teamId         String
+  team           HaloTeam @relation(fields: [teamId], references: [id])
+  level1Count    Int      @default(0)
+  level1AvgCost  Float    @default(0)
+  level2Count    Int      @default(0)
+  level2AvgCost  Float    @default(0)
+  level3Count    Int      @default(0)
+  level3AvgCost  Float    @default(0)
+  totalAgents    Int      @default(0)
+  analysisDate   DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+// HaloPSA Service Hours Models
+model HaloService {
+  id              String                @id @default(cuid())
+  haloId          Int                   @unique
+  name            String
+  description     String?
+  category        String?
+  serviceType     String?               // 'setup', 'monthly', 'project'
+  isActive        Boolean               @default(true)
+  templates       HaloServiceTemplate[]
+  items           HaloServiceItem[]
+  syncedAt        DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+}
+
+model HaloServiceTemplate {
+  id              String      @id @default(cuid())
+  haloId          Int         @unique
+  name            String
+  description     String?
+  serviceId       String?
+  service         HaloService? @relation(fields: [serviceId], references: [id])
+  
+  // Hour estimates by skill level
+  level1Hours     Float       @default(0)
+  level2Hours     Float       @default(0) 
+  level3Hours     Float       @default(0)
+  totalHours      Float       @default(0)
+  
+  // Template metadata
+  templateType    String?     // 'ticket', 'project', 'workflow'
+  priority        Int?
+  category        String?
+  
+  rawData         Json        // Store full template data from HaloPSA
+  syncedAt        DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+}
+
+model HaloServiceItem {
+  id              String      @id @default(cuid())
+  haloId          Int         @unique
+  name            String
+  description     String?
+  serviceId       String?
+  service         HaloService? @relation(fields: [serviceId], references: [id])
+  
+  // Cost and pricing
+  costPerUnit     Float       @default(0)
+  pricePerUnit    Float       @default(0)
+  
+  // Time estimates (if applicable)
+  setupHours      Float       @default(0)
+  maintenanceHours Float      @default(0)
+  
+  // Item metadata
+  itemType        String?     // 'hardware', 'software', 'service'
+  vendor          String?
+  sku             String?
+  
+  rawData         Json        // Store full item data from HaloPSA
+  syncedAt        DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+}
+
+model ServiceHoursSyncLog {
+  id              String   @id @default(cuid())
+  syncType        String   // 'templates', 'items', 'full'
+  status          String   // 'success', 'error', 'partial'
+  recordsSync     Int      @default(0)
+  errorMessage    String?
+  syncData        Json?    // Store summary data
+  syncedAt        DateTime @default(now())
+}
