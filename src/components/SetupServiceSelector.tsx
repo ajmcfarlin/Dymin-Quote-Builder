@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { useState } from 'react'
 import { Trash2 } from 'lucide-react'
 import { SetupService, CustomerInfo } from '@/types/quote'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -9,10 +9,12 @@ import { calculateSetupServiceHours } from '@/lib/setupServiceCalculations'
 interface SetupServiceSelectorProps {
   setupServices: SetupService[]
   customer?: CustomerInfo
+  upfrontPayment?: number
   onChange: (services: SetupService[]) => void
+  onUpfrontPaymentChange?: (amount: number) => void
 }
 
-export function SetupServiceSelector({ setupServices, customer, onChange }: SetupServiceSelectorProps) {
+export function SetupServiceSelector({ setupServices, customer, upfrontPayment = 0, onChange, onUpfrontPaymentChange }: SetupServiceSelectorProps) {
   const toggleService = (serviceId: string) => {
     const updatedServices = setupServices.map(service =>
       service.id === serviceId
@@ -50,7 +52,6 @@ export function SetupServiceSelector({ setupServices, customer, onChange }: Setu
   }
 
   // Hours are now calculated automatically, no manual input needed
-
   const getSkillLevelBadge = (level: 1 | 2 | 3) => {
     const colors = {
     1: 'bg-green-100 text-green-800',
@@ -70,6 +71,39 @@ export function SetupServiceSelector({ setupServices, customer, onChange }: Setu
   }
 
   const activeServices = setupServices.filter(service => service.isActive)
+
+  // Calculate totals for active services
+  const calculateTotals = () => {
+    if (!customer) return { totalHours: 0, totalCost: 0, totalPrice: 0 }
+
+    return activeServices.reduce((totals, service) => {
+      const hours = calculateSetupServiceHours(service.id, service.isActive, customer)
+      const costRate = service.skillLevel === 1 ? 22 : service.skillLevel === 2 ? 37 : 46
+      const priceRate = service.skillLevel === 1 ? 155 : service.skillLevel === 2 ? 185 : 275
+
+      let serviceCost = hours * costRate
+      let servicePrice = hours * priceRate
+
+      // Email Migration includes license costs
+      if (service.id === 'email-migration') {
+        const costLicense = 28 * ((customer.users.full || 0) + (customer.users.emailOnly || 0))
+        const priceLicense = 42 * ((customer.users.full || 0) + (customer.users.emailOnly || 0))
+        serviceCost += costLicense
+        servicePrice += priceLicense
+      }
+
+      return {
+        totalHours: totals.totalHours + hours,
+        totalCost: totals.totalCost + serviceCost,
+        totalPrice: totals.totalPrice + servicePrice
+      }
+    }, { totalHours: 0, totalCost: 0, totalPrice: 0 })
+  }
+
+  const totals = calculateTotals()
+  const deferredSetupPrice = customer?.contractMonths 
+    ? (totals.totalPrice - upfrontPayment) / customer.contractMonths 
+    : 0
 
   return (
     <div className="space-y-6">
@@ -223,7 +257,19 @@ export function SetupServiceSelector({ setupServices, customer, onChange }: Setu
                     </label>
                     <div className="px-3 py-2 text-sm text-gray-700 bg-gray-50 rounded">
                       ${customer && service.skillLevel ? 
-                        (calculateSetupServiceHours(service.id, service.isActive, customer) * (service.skillLevel === 1 ? 22 : service.skillLevel === 2 ? 37 : 46)).toFixed(2) 
+                        (() => {
+                          const hours = calculateSetupServiceHours(service.id, service.isActive, customer)
+                          const costRate = service.skillLevel === 1 ? 22 : service.skillLevel === 2 ? 37 : 46
+                          let totalCost = hours * costRate
+                          
+                          // Email Migration includes license costs
+                          if (service.id === 'email-migration') {
+                            const licenseCost = 28 * ((customer.users.full || 0) + (customer.users.emailOnly || 0))
+                            totalCost += licenseCost
+                          }
+                          
+                          return totalCost.toFixed(2)
+                        })()
                         : '0.00'}
                     </div>
                   </div>
@@ -248,7 +294,15 @@ export function SetupServiceSelector({ setupServices, customer, onChange }: Setu
                             return 'Error'
                           }
                           
-                          return (hours * rate).toFixed(2)
+                          let totalCost = hours * rate
+                          
+                          // Email Migration includes license costs
+                          if (service.id === 'email-migration') {
+                            const licenseCost = 42 * ((customer.users.full || 0) + (customer.users.emailOnly || 0))
+                            totalCost += licenseCost
+                          }
+                          
+                          return totalCost.toFixed(2)
                         })()
                         : '0.00'}
                     </div>
@@ -258,6 +312,71 @@ export function SetupServiceSelector({ setupServices, customer, onChange }: Setu
             </Card>
           ))}
         </div>
+      )}
+
+      {/* Setup Services Totals */}
+      {activeServices.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Setup Services Summary</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Total Hours
+                </label>
+                <div className="px-3 py-2 text-sm font-medium text-gray-900 bg-gray-50 rounded">
+                  {totals.totalHours.toFixed(2)} hrs
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Total Cost
+                </label>
+                <div className="px-3 py-2 text-sm font-medium text-gray-900 bg-gray-50 rounded">
+                  ${totals.totalCost.toFixed(2)}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Total Price
+                </label>
+                <div className="px-3 py-2 text-sm font-medium text-gray-900 bg-gray-50 rounded">
+                  ${totals.totalPrice.toFixed(2)}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Upfront Payment
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={upfrontPayment}
+                  onChange={(e) => onUpfrontPaymentChange?.(parseFloat(e.target.value) || 0)}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="0.00"
+                />
+              </div>
+            </div>
+
+            <div className="pt-3 border-t border-gray-200">
+              <div className="flex justify-between items-center">
+                <div>
+                  <span className="text-sm font-medium text-gray-700">Deferred Setup Price</span>
+                </div>
+                <div className="text-lg font-semibold text-gray-900">
+                  ${deferredSetupPrice.toFixed(2)}/month
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       )}
     </div>
   )

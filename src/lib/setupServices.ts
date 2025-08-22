@@ -6,11 +6,8 @@ export const DEFAULT_SETUP_SERVICES: SetupService[] = [
     name: 'Consulting Services (New Project)',
     isActive: false,
     skillLevel: 2,
-    factor1: 'onsite',
-    factor2: 'business',
-    hours: 8,
-    cost: 1000,
-    price: 2500
+    factor1: 'remote',
+    factor2: 'business'
   },
   {
     id: 'project-management',
@@ -18,32 +15,23 @@ export const DEFAULT_SETUP_SERVICES: SetupService[] = [
     isActive: false,
     skillLevel: 2,
     factor1: 'remote',
-    factor2: 'business',
-    hours: 4,
-    cost: 500,
-    price: 1500
+    factor2: 'business'
   },
   {
     id: 'standard-onboarding',
     name: 'Standard Onboarding',
     isActive: false,
     skillLevel: 2,
-    factor1: 'onsite',
-    factor2: 'business',
-    hours: 6,
-    cost: 300,
-    price: 800
+    factor1: 'remote',
+    factor2: 'business'
   },
   {
     id: 'onprem-server-onboarding',
     name: 'On-Premises Server Onboarding',
     isActive: false,
     skillLevel: 2,
-    factor1: 'onsite',
-    factor2: 'business',
-    hours: 8,
-    cost: 400,
-    price: 1200
+    factor1: 'remote',
+    factor2: 'business'
   },
   {
     id: 'azure-virtual-server',
@@ -51,10 +39,7 @@ export const DEFAULT_SETUP_SERVICES: SetupService[] = [
     isActive: false,
     skillLevel: 2,
     factor1: 'remote',
-    factor2: 'business',
-    hours: 6,
-    cost: 350,
-    price: 1000
+    factor2: 'business'
   },
   {
     id: 'intune-onboarding',
@@ -62,93 +47,70 @@ export const DEFAULT_SETUP_SERVICES: SetupService[] = [
     isActive: false,
     skillLevel: 2,
     factor1: 'remote',
-    factor2: 'business',
-    hours: 4,
-    cost: 200,
-    price: 600
+    factor2: 'business'
   },
   {
     id: 'voip-onboarding',
     name: 'VoIP Onboarding',
     isActive: false,
     skillLevel: 2,
-    factor1: 'onsite',
-    factor2: 'business',
-    hours: 6,
-    cost: 250,
-    price: 750
+    factor1: 'remote',
+    factor2: 'business'
   },
   {
     id: 'voip-sms-addon',
     name: 'VoIP SMS Add-On',
     isActive: false,
-    skillLevel: 1,
+    skillLevel: 2,
     factor1: 'remote',
-    factor2: 'business',
-    hours: 1,
-    cost: 50,
-    price: 150
+    factor2: 'business'
   },
   {
     id: 'email-migration',
     name: 'Email Migration (One-time License Cost/Price INCLUDED)',
     isActive: false,
     skillLevel: 2,
-    hours: 8,
-    cost: 300,
-    price: 900
+    factor1: 'remote',
+    factor2: 'business'
   },
   {
     id: 'office-relocation',
     name: 'Office Relocation/Expansion',
     isActive: false,
     skillLevel: 2,
-    hours: 12,
-    cost: 500,
-    price: 1500
+    factor1: 'remote',
+    factor2: 'business'
   },
   {
     id: 'inky-email-security',
     name: 'INKY Email Security Add-On',
     isActive: false,
-    skillLevel: 1,
+    skillLevel: 2,
     factor1: 'remote',
-    factor2: 'business',
-    hours: 2,
-    cost: 100,
-    price: 300
+    factor2: 'business'
   },
   {
     id: 'duo-mfa',
     name: 'Duo MFA Add-On',
     isActive: false,
-    skillLevel: 1,
+    skillLevel: 2,
     factor1: 'remote',
-    factor2: 'business',
-    hours: 2,
-    cost: 75,
-    price: 225
+    factor2: 'business'
   },
   {
     id: 'infima-cyber-training',
     name: 'Infima Cyber Security Training Add-On',
     isActive: false,
-    skillLevel: 1,
+    skillLevel: 2,
     factor1: 'remote',
-    factor2: 'business',
-    hours: 3,
-    cost: 150,
-    price: 450
+    factor2: 'business'
   },
   {
     id: 'lob-app-migration',
     name: 'LOB App Migration',
     isActive: false,
-    skillLevel: 3,
-    factor1: 'onsite',
-    factor2: 'business',
-    hours: 16,
-    cost: 800,
-    price: 2400
+    skillLevel: 2,
+    factor1: 'remote',
+    factor2: 'business'
   }
 ]

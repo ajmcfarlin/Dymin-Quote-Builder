@@ -5,8 +5,7 @@ import { Maximize2, Minimize2 } from 'lucide-react'
 import { QuoteCalculation } from '@/types/quote'
 import { MonthlyServicesData } from '@/types/monthlyServices'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { calculateSetupServiceHours } from '@/lib/setupServiceCalculations'
-import { DEFAULT_LABOR_RATES } from '@/lib/calculations'
+import { DEFAULT_VARIABLE_COST_TOOLS, calculateToolQuantityFromInfrastructure } from '@/lib/monthlyServices'
 
 interface PricingSummaryProps {
   calculations?: QuoteCalculation
@@ -24,7 +23,54 @@ export function PricingSummary({ calculations, monthlyServices, onExpandToggle, 
     setIsExpanded(newExpanded)
     onExpandToggle?.(newExpanded)
   }
-  if (!calculations) {
+
+  // Calculate tools costs from infrastructure data even when no monthlyServices data
+  const calculateToolsCostsFromInfrastructure = () => {
+    if (!calculations?.customer) return 0
+    
+    const toolsWithQuantities = DEFAULT_VARIABLE_COST_TOOLS.map(tool => {
+      const quantity = calculateToolQuantityFromInfrastructure(
+        tool.id, 
+        calculations.customer.infrastructure, 
+        calculations.customer.users
+      )
+      
+      return {
+        ...tool,
+        quantity,
+        extendedPrice: quantity * (tool.pricePerNodeUnit || 0)
+      }
+    })
+    
+    return toolsWithQuantities
+      .filter(tool => tool.extendedPrice > 0)
+      .reduce((sum, tool) => sum + tool.extendedPrice, 0)
+  }
+
+  // Get detailed tools breakdown for expanded view
+  const getToolsBreakdown = () => {
+    if (!calculations?.customer) return []
+    
+    return DEFAULT_VARIABLE_COST_TOOLS.map(tool => {
+      const quantity = calculateToolQuantityFromInfrastructure(
+        tool.id, 
+        calculations.customer.infrastructure, 
+        calculations.customer.users
+      )
+      
+      return {
+        name: tool.name,
+        quantity,
+        pricePerUnit: tool.pricePerNodeUnit || 0,
+        extendedPrice: quantity * (tool.pricePerNodeUnit || 0)
+      }
+    }).filter(tool => tool.extendedPrice > 0)
+  }
+  // Don't early return if we have no calculations - we'll show tools calculation if possible
+  const hasCustomerData = calculations?.customer?.companyName || calculations?.customer?.infrastructure || calculations?.customer?.users
+  
+  
+  if (!calculations || !hasCustomerData) {
     const cardStyle = isExpanded && maxHeight ? {
       backgroundColor: '#343333',
       maxHeight: `${maxHeight}px`,
@@ -56,6 +102,27 @@ export function PricingSummary({ calculations, monthlyServices, onExpandToggle, 
 
   const { totals } = calculations
 
+  // Calculate tools total - use monthlyServices if it has meaningful data, otherwise calculate from infrastructure
+  const hasActiveMonthlyTools = monthlyServices?.variableCostTools.some(tool => tool.isActive && tool.extendedPrice > 0)
+  
+  const toolsTotal = hasActiveMonthlyTools && monthlyServices
+    ? monthlyServices.variableCostTools.filter(tool => tool.isActive && tool.extendedPrice > 0)
+        .reduce((sum, tool) => sum + tool.extendedPrice, 0)
+    : calculateToolsCostsFromInfrastructure()
+    
+
+  // Ensure totals has safe defaults
+  const safeTotals = {
+    monthlyTotal: totals?.monthlyTotal || 0,
+    toolsSoftware: totals?.toolsSoftware || 0,
+    deferredSetupMonthly: totals?.deferredSetupMonthly || 0,
+    supportLabor: totals?.supportLabor || 0,
+    otherLabor: totals?.otherLabor || 0,
+    contractTotal: totals?.contractTotal || 0,
+    setupCosts: totals?.setupCosts || 0,
+    upfrontPayment: totals?.upfrontPayment || 0
+  }
+
   const formatCurrency = (amount: number) => {
     if (isNaN(amount) || amount === null || amount === undefined) {
       return '$0.00'
@@ -66,19 +133,6 @@ export function PricingSummary({ calculations, monthlyServices, onExpandToggle, 
     }).format(amount)
   }
 
-  const calculateServicePrice = (service: any) => {
-    if (!calculations?.customer || !service.skillLevel) {
-      return service.price || 0
-    }
-    
-    const calculatedHours = calculateSetupServiceHours(service.id, service.isActive, calculations.customer)
-    if (calculatedHours && service.skillLevel) {
-      const rates = DEFAULT_LABOR_RATES[`level${service.skillLevel}` as keyof typeof DEFAULT_LABOR_RATES]
-      const priceRate = service.factor2 === 'afterhours' ? rates.priceAfterHours : rates.priceBusinessHours
-      return calculatedHours * priceRate
-    }
-    return service.price || 0
-  }
 
   const cardStyle = isExpanded && maxHeight ? {
     backgroundColor: '#343333',
@@ -111,129 +165,114 @@ export function PricingSummary({ calculations, monthlyServices, onExpandToggle, 
       </CardHeader>
       <CardContent className="space-y-4 flex-1" style={contentStyle}>
         <div className="space-y-2">
-          <h4 className="font-semibold text-lg text-white">One-Time Setup Costs</h4>
+          <h4 className="font-semibold text-lg text-white">Monthly Recurring Price</h4>
           
           {isExpanded && (
-            <div className="space-y-1 text-sm pl-2 border-l-2 border-gray-600">
-              {calculations.setupServices.filter(service => service.isActive).map(service => (
-                <div key={service.id} className="flex justify-between">
-                  <span className="text-white">{service.name}:</span>
-                  <span className="text-white">{formatCurrency(calculateServicePrice(service))}</span>
-                </div>
-              ))}
-              {calculations.setupServices.filter(service => service.isActive).length === 0 && (
-                <div className="text-white text-xs italic">No setup services selected</div>
-              )}
-            </div>
-          )}
-          
-          <div className="flex justify-between text-sm">
-            <span className="text-white font-medium">Total Setup:</span>
-            <span className="text-white font-medium">{formatCurrency(totals.setupCosts)}</span>
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <h4 className="font-semibold text-lg text-white">Monthly Recurring Costs</h4>
-          
-          {isExpanded && monthlyServices && (
             <div className="space-y-2 text-sm pl-2 border-l-2 border-gray-600">
-              {/* Fixed Cost Tools */}
-              {monthlyServices.fixedCostTools.filter(tool => tool.isActive).length > 0 && (
-                <div>
-                  <div className="text-white text-xs font-medium mb-1">Fixed Cost Tools:</div>
-                  {monthlyServices.fixedCostTools.filter(tool => tool.isActive).map(tool => (
-                    <div key={tool.id} className="flex justify-between ml-2">
-                      <span className="text-white">{tool.name}:</span>
-                      <span className="text-white">{formatCurrency(tool.extendedPrice)}</span>
+              {hasActiveMonthlyTools && monthlyServices ? (
+                <>
+                  {/* Fixed Cost Tools */}
+                  {monthlyServices.fixedCostTools.filter(tool => tool.isActive && tool.extendedPrice > 0).length > 0 && (
+                    <div>
+                      <div className="text-white text-xs font-medium mb-1">Fixed Cost Tools:</div>
+                      {monthlyServices.fixedCostTools.filter(tool => tool.isActive && tool.extendedPrice > 0).map(tool => (
+                        <div key={tool.id} className="flex justify-between ml-2">
+                          <span className="text-white">{tool.name}:</span>
+                          <span className="text-white">{formatCurrency(tool.extendedPrice)}</span>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              )}
-              
-              {/* Variable Cost Tools */}
-              {monthlyServices.variableCostTools.filter(tool => tool.isActive).length > 0 && (
-                <div>
-                  <div className="text-white text-xs font-medium mb-1">Variable Cost Tools:</div>
-                  {monthlyServices.variableCostTools.filter(tool => tool.isActive).map(tool => (
-                    <div key={tool.id} className="flex justify-between ml-2">
-                      <span className="text-white">{tool.name} ({tool.nodesUnitsSupported} units):</span>
-                      <span className="text-white">{formatCurrency(tool.extendedPrice)}</span>
+                  )}
+                  
+                  {/* Variable Cost Tools */}
+                  {monthlyServices.variableCostTools.filter(tool => tool.isActive && tool.extendedPrice > 0).length > 0 && (
+                    <div>
+                      <div className="text-white text-xs font-medium mb-1">Variable Cost Tools:</div>
+                      {monthlyServices.variableCostTools.filter(tool => tool.isActive && tool.extendedPrice > 0).map(tool => (
+                        <div key={tool.id} className="flex justify-between ml-2">
+                          <span className="text-white">{tool.name} ({tool.nodesUnitsSupported} units):</span>
+                          <span className="text-white">{formatCurrency(tool.extendedPrice)}</span>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              )}
-              
-              {monthlyServices.fixedCostTools.filter(tool => tool.isActive).length === 0 && 
-               monthlyServices.variableCostTools.filter(tool => tool.isActive).length === 0 && (
-                <div className="text-white text-xs italic">No monthly tools selected</div>
+                  )}
+                  
+                  {monthlyServices.fixedCostTools.filter(tool => tool.isActive && tool.extendedPrice > 0).length === 0 && 
+                   monthlyServices.variableCostTools.filter(tool => tool.isActive && tool.extendedPrice > 0).length === 0 && (
+                    <div className="text-white text-xs italic">No monthly tools configured</div>
+                  )}
+                </>
+              ) : (
+                <>
+                  {/* Show calculated tools from infrastructure data */}
+                  {getToolsBreakdown().length > 0 && (
+                    <div>
+                      <div className="text-white text-xs font-medium mb-1">Tools & Licensing (from infrastructure):</div>
+                      {getToolsBreakdown().map((tool, index) => (
+                        <div key={index} className="flex justify-between ml-2">
+                          <span className="text-white">{tool.name} ({tool.quantity} units):</span>
+                          <span className="text-white">{formatCurrency(tool.extendedPrice)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  
+                  {getToolsBreakdown().length === 0 && (
+                    <div className="text-white text-xs italic">Configure infrastructure to see tools pricing</div>
+                  )}
+                </>
               )}
             </div>
           )}
           
           <div className="space-y-1 text-sm">
-            {totals.supportLabor > 0 && (
-              <div className="flex justify-between">
+            <div className="space-y-1">
+              <div className="flex justify-between text-sm">
+                <span className="text-white">Setup Services:</span>
+                <span className="text-white">{formatCurrency(safeTotals.deferredSetupMonthly)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-white">Tools & Licensing:</span>
+                <span className="text-white">{formatCurrency(safeTotals.toolsSoftware || toolsTotal)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
                 <span className="text-white">Support Labor:</span>
-                <span className="text-white">{formatCurrency(totals.supportLabor)}</span>
+                <span className="text-white">{formatCurrency(safeTotals.supportLabor)}</span>
               </div>
-            )}
-            {totals.toolsSoftware > 0 && (
-              <div className="flex justify-between">
-                <span className="text-white">Tools & Software:</span>
-                <span className="text-white">{formatCurrency(totals.toolsSoftware)}</span>
+              <div className="flex justify-between text-sm">
+                <span className="text-white">Other Labor:</span>
+                <span className="text-white">{formatCurrency(safeTotals.otherLabor)}</span>
               </div>
-            )}
-            {totals.haas > 0 && (
-              <div className="flex justify-between">
-                <span className="text-white">Hardware as a Service:</span>
-                <span className="text-white">{formatCurrency(totals.haas)}</span>
+              <div className="flex justify-between font-semibold pt-1 border-t border-gray-600">
+                <span className="text-white">Monthly Total:</span>
+                <span className="text-white">{formatCurrency(
+                  hasActiveMonthlyTools 
+                    ? safeTotals.monthlyTotal 
+                    : (safeTotals.monthlyTotal - safeTotals.toolsSoftware + toolsTotal)
+                )}</span>
               </div>
-            )}
-            {totals.warranty > 0 && (
-              <div className="flex justify-between">
-                <span className="text-white">Warranty & Support:</span>
-                <span className="text-white">{formatCurrency(totals.warranty)}</span>
-              </div>
-            )}
-            {totals.monthlyTotal > 0 ? (
-              <>
-                <hr className="my-2 border-gray-600" />
-                <div className="flex justify-between font-semibold">
-                  <span className="text-white">Monthly Total:</span>
-                  <span className="text-white">{formatCurrency(totals.monthlyTotal)}</span>
-                </div>
-              </>
-            ) : (
-              <div className="text-white text-sm italic">
-                Monthly services will be configured in Step 2
-              </div>
-            )}
+            </div>
           </div>
         </div>
 
         <div className="border-t border-gray-600 pt-4">
-          {totals.monthlyTotal > 0 ? (
-            <>
-              <div className="flex justify-between text-lg font-bold">
-                <span className="text-white">Total Contract Value:</span>
-                <span style={{ color: '#15bef0' }}>{formatCurrency(totals.contractTotal)}</span>
-              </div>
-              <p className="text-sm text-white mt-1">
-                {calculations.customer.contractMonths || 36} month contract
-              </p>
-            </>
-          ) : (
-            <>
-              <div className="flex justify-between text-lg font-bold">
-                <span className="text-white">Setup Costs Total:</span>
-                <span style={{ color: '#15bef0' }}>{formatCurrency(totals.setupCosts)}</span>
-              </div>
-              <p className="text-sm text-white mt-1">
-                One-time project costs • Monthly costs to be added in Step 2
-              </p>
-            </>
-          )}
+          <div className="flex justify-between text-lg font-bold">
+            <span className="text-white">Total Contract Value:</span>
+            <span style={{ color: '#15bef0' }}>
+              {formatCurrency(
+                hasActiveMonthlyTools 
+                  ? safeTotals.contractTotal 
+                  : ((safeTotals.monthlyTotal - safeTotals.toolsSoftware + toolsTotal) * calculations.customer.contractMonths + (safeTotals.upfrontPayment || 0))
+              )}
+            </span>
+          </div>
+          <div className="text-sm text-gray-300 mt-1">
+            Monthly: {formatCurrency(
+              hasActiveMonthlyTools 
+                ? safeTotals.monthlyTotal 
+                : (safeTotals.monthlyTotal - safeTotals.toolsSoftware + toolsTotal)
+            )} × {calculations.customer.contractMonths} months
+          </div>
         </div>
 
         <div className="bg-gray-700 p-3 rounded-md">
@@ -254,6 +293,18 @@ export function PricingSummary({ calculations, monthlyServices, onExpandToggle, 
             <div className="flex justify-between">
               <span className="text-white">Workstations:</span>
               <span className="text-white">{calculations.customer.infrastructure.workstations || 0}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-white">Servers:</span>
+              <span className="text-white">{calculations.customer.infrastructure.servers || 0}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-white">Printers:</span>
+              <span className="text-white">{calculations.customer.infrastructure.printers || 0}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-white">Phone Extensions:</span>
+              <span className="text-white">{calculations.customer.infrastructure.phoneExtensions || 0}</span>
             </div>
           </div>
         </div>
