@@ -7,7 +7,7 @@ import Image from 'next/image'
 import { Input } from '@/components/ui/input'
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('')
+  const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -20,13 +20,13 @@ export default function LoginPage() {
 
     try {
       const result = await signIn('credentials', {
-        email,
+        username,
         password,
         redirect: false
       })
 
       if (result?.error) {
-        setError('Invalid email or password')
+        setError('Invalid username or password')
       } else {
         router.push('/dashboard')
       }
@@ -50,10 +50,10 @@ export default function LoginPage() {
                 height={80}
                 className="relative z-10 logo-main"
               />
-              {/* Glow effects */}
-              <div className="absolute inset-0 logo-glow-1"></div>
-              <div className="absolute inset-0 logo-glow-2"></div>
-              <div className="absolute inset-0 logo-glow-3"></div>
+              {/* Glow effects positioned over power button */}
+              <div className="absolute logo-glow-1"></div>
+              <div className="absolute logo-glow-2"></div>
+              <div className="absolute logo-glow-3"></div>
             </div>
           </div>
         </div>
@@ -68,24 +68,41 @@ export default function LoginPage() {
           }
           
           .logo-glow-1 {
-            background: radial-gradient(ellipse at center, rgba(21, 190, 240, 0.8) 0%, transparent 60%);
-            animation: pulse1 1.5s ease-in-out infinite;
+            background: radial-gradient(circle at center, rgba(21, 190, 240, 0.95) 0%, rgba(21, 190, 240, 0.7) 30%, transparent 60%);
+            animation: powerPulse 5s ease-in-out infinite;
             border-radius: 50%;
-            transform: scale(1.3);
+            --base-scale: 1.3;
+            width: 30px;
+            height: 30px;
+            top: 45%;
+            left: 10%;
+            transform: translate(-50%, -50%) scale(var(--base-scale, 1));
           }
           
           .logo-glow-2 {
-            background: radial-gradient(ellipse at center, rgba(21, 190, 240, 0.6) 0%, transparent 50%);
-            animation: pulse2 2s ease-in-out infinite;
+            background: radial-gradient(circle at center, rgba(21, 190, 240, 0.4) 0%, rgba(21, 190, 240, 0.2) 50%, transparent 70%);
+            animation: powerPulse 5s ease-in-out infinite;
             border-radius: 50%;
-            transform: scale(1.7);
+            --base-scale: 1.7;
+            animation-delay: 0.1s;
+            width: 40px;
+            height: 40px;
+            top: 45%;
+            left: 10%;
+            transform: translate(-50%, -50%) scale(var(--base-scale, 1));
           }
           
           .logo-glow-3 {
-            background: radial-gradient(ellipse at center, rgba(21, 190, 240, 0.4) 0%, transparent 70%);
-            animation: pulse3 2.5s ease-in-out infinite;
+            background: radial-gradient(circle at center, rgba(21, 190, 240, 0.2) 0%, rgba(21, 190, 240, 0.1) 40%, transparent 80%);
+            animation: powerPulse 5s ease-in-out infinite;
             border-radius: 50%;
-            transform: scale(2.5);
+            --base-scale: 2.5;
+            animation-delay: 0.2s;
+            width: 60px;
+            height: 60px;
+            top: 45%;
+            left: 10%;
+            transform: translate(-50%, -50%) scale(var(--base-scale, 1));
           }
           
           @keyframes logoFloat {
@@ -93,19 +110,15 @@ export default function LoginPage() {
             100% { transform: translateY(-10px); }
           }
           
-          @keyframes pulse1 {
-            0%, 100% { opacity: 0.8; transform: scale(1.3); }
-            50% { opacity: 1; transform: scale(1.5); }
-          }
-          
-          @keyframes pulse2 {
-            0%, 100% { opacity: 0.6; transform: scale(1.7); }
-            50% { opacity: 0.9; transform: scale(1.9); }
-          }
-          
-          @keyframes pulse3 {
-            0%, 100% { opacity: 0.4; transform: scale(2.5); }
-            50% { opacity: 0.7; transform: scale(2.8); }
+          @keyframes powerPulse {
+            0%, 100% { 
+              opacity: 0.4; 
+              transform: translate(-50%, -50%) scale(var(--base-scale, 1)); 
+            }
+            50% { 
+              opacity: 1; 
+              transform: translate(-50%, -50%) scale(calc(var(--base-scale, 1) * 1.2)); 
+            }
           }
         `}</style>
 
@@ -119,12 +132,12 @@ export default function LoginPage() {
             )}
 
             <Input
-              label="Email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              label="Username"
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
               required
-              placeholder="Enter your email"
+              placeholder="Enter your username"
             />
 
             <Input
@@ -148,7 +161,7 @@ export default function LoginPage() {
 
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-400">
-              Demo credentials: admin@dymin.com / password123
+              Demo credentials: admin / admin123, sales / sales123, john / john123
             </p>
           </div>
         </div>

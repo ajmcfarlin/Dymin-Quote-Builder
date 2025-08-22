@@ -13,6 +13,13 @@ export interface CustomerInfo {
     servers: number
     printers: number
     phoneExtensions: number
+    wifiAccessPoints: number
+    firewalls: number
+    switches: number
+    ups: number
+    nas: number
+    managedMobileDevices: number
+    domainsUsedForEmail: number
   }
 }
 
@@ -68,12 +75,15 @@ export interface QuoteCalculation {
     // Monthly recurring costs
     toolsSoftware: number
     supportLabor: number
+    otherLabor: number
     haas: number
     warranty: number
     monthlyTotal: number
     
-    // One-time costs
+    // Setup costs breakdown
     setupCosts: number
+    upfrontPayment: number
+    deferredSetupMonthly: number
     
     // Contract totals
     contractTotal: number

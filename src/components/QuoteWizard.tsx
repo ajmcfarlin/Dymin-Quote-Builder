@@ -3,14 +3,18 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { CustomerInfo, SetupService, QuoteCalculation } from '@/types/quote'
 import { MonthlyServicesData } from '@/types/monthlyServices'
+import { OtherLaborData } from '@/types/otherLabor'
 import { calculateQuote } from '@/lib/calculations'
 import { DEFAULT_SETUP_SERVICES } from '@/lib/setupServices'
-import { DEFAULT_FIXED_COST_TOOLS, DEFAULT_VARIABLE_COST_TOOLS } from '@/lib/monthlyServices'
+import { DEFAULT_MONTHLY_SERVICES_DATA } from '@/lib/monthlyServices'
+import { DEFAULT_MONTHLY_LABOR_SERVICES, DEFAULT_INCIDENT_BASED_SERVICES } from '@/lib/otherLabor'
 import { CustomerForm } from './CustomerForm'
 import { SetupServiceSelector } from './SetupServiceSelector'
 import { MonthlyServicesSelector } from './MonthlyServicesSelector'
 import { PricingSummary } from './PricingSummary'
 import { SupportLaborSelector } from './SupportLaborSelector'
+import { useSupportDevices } from '@/hooks/useSupportDevices'
+import { OtherLaborSelector } from './OtherLaborSelector'
 
 export function QuoteWizard() {
   const [currentStep, setCurrentStep] = useState(1)
@@ -18,6 +22,16 @@ export function QuoteWizard() {
   const [quoteSummaryExpanded, setQuoteSummaryExpanded] = useState(false)
   const [maxContentHeight, setMaxContentHeight] = useState<number | null>(null)
   const mainContentRef = useRef<HTMLDivElement>(null)
+  
+  // Fetch database devices for auto-calculation
+  const { devices: configDevices, loading: configLoading } = useSupportDevices()
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(amount)
+  }
   const [customer, setCustomer] = useState<CustomerInfo>({
     companyName: '',
     address: '',
@@ -25,14 +39,28 @@ export function QuoteWizard() {
     contractMonths: 36,
     contractType: 'Managed Services',
     users: { full: 0, emailOnly: 0 },
-    infrastructure: { workstations: 0, servers: 0, printers: 0, phoneExtensions: 0 }
+    infrastructure: { 
+      workstations: 0, 
+      servers: 0, 
+      printers: 0, 
+      phoneExtensions: 0,
+      wifiAccessPoints: 0,
+      firewalls: 0,
+      switches: 0,
+      ups: 0,
+      nas: 0,
+      managedMobileDevices: 0,
+      domainsUsedForEmail: 0
+    }
   })
   const [setupServices, setSetupServices] = useState<SetupService[]>(DEFAULT_SETUP_SERVICES)
-  const [monthlyServices, setMonthlyServices] = useState<MonthlyServicesData>({
-    fixedCostTools: DEFAULT_FIXED_COST_TOOLS,
-    variableCostTools: DEFAULT_VARIABLE_COST_TOOLS
-  })
+  const [monthlyServices, setMonthlyServices] = useState<MonthlyServicesData>(DEFAULT_MONTHLY_SERVICES_DATA)
+  const [upfrontPayment, setUpfrontPayment] = useState(0)
   const [supportDevices, setSupportDevices] = useState<any[]>([])
+  const [otherLaborData, setOtherLaborData] = useState<OtherLaborData>({
+    monthlyServices: DEFAULT_MONTHLY_LABOR_SERVICES,
+    incidentServices: DEFAULT_INCIDENT_BASED_SERVICES
+  })
   const [calculations, setCalculations] = useState<QuoteCalculation>()
 
   const handleCustomerChange = useMemo(() => (newCustomer: CustomerInfo) => {
@@ -50,14 +78,96 @@ export function QuoteWizard() {
   const activeDevices = supportDevices.filter(device => device.isActive)
   const activeServices = setupServices.filter(service => service.isActive)
 
+  // Auto-calculate support devices based on customer data and setup services
+  // Use refs to track user manual edits and prevent overriding them
+  const userHasEditedDevicesManually = useRef(false)
+  
+  // Track when user manually edits support devices to prevent auto-calculation override
+  const handleSupportDevicesChange = (newDevices: any[]) => {
+    console.log('User manually changed support devices, disabling auto-calculation')
+    userHasEditedDevicesManually.current = true
+    setSupportDevices(newDevices)
+  }
+  
+  // Initialize devices from database config when first loaded
   useEffect(() => {
-    // Always include monthly services in calculations if any are active
-    const hasActiveMonthlyServices = monthlyServices.fixedCostTools.some(tool => tool.isActive) || 
-                                   monthlyServices.variableCostTools.some(tool => tool.isActive)
+    if (configDevices.length > 0 && !configLoading && supportDevices.length === 0) {
+      console.log('Initial load: setting up support devices from database config')
+      setSupportDevices(configDevices.map(device => ({ ...device, skillLevel: 2 })))
+    }
+  }, [configDevices, configLoading, supportDevices.length])
+  
+  // Track specific values to avoid array reference issues
+  const contractType = customer.contractType
+  const fullUsers = customer.users?.full || 0
+  const intuneOnboardingActive = setupServices.find(service => service.id === 'intune-onboarding')?.isActive || false
+  
+  
+  // Auto-calculate devices whenever customer data or setup services change
+  useEffect(() => {
+    
+    if (supportDevices.length > 0) {
+      
+      const autoCalculatedDevices = supportDevices.map(device => {
+        let updatedDevice = { ...device }
+        
+        
+        // Auto-calculation logic based on device name
+        if (device.name === 'MS InTune Mgmt') {
+          if (intuneOnboardingActive) {
+            updatedDevice.isActive = true
+            updatedDevice.quantity = 1
+          } else {
+            updatedDevice.isActive = false
+            updatedDevice.quantity = 0
+          }
+        } else if (device.name === 'Proactive Users') {
+          if (contractType === 'Managed Services' && fullUsers > 0) {
+            updatedDevice.isActive = true
+            updatedDevice.quantity = fullUsers
+          } else {
+            updatedDevice.isActive = false
+            updatedDevice.quantity = 0
+          }
+        } else if (device.name === 'Co-Managed Users') {
+          if (contractType === 'Co-Managed Services' && fullUsers > 0) {
+            updatedDevice.isActive = true
+            updatedDevice.quantity = fullUsers
+          } else {
+            updatedDevice.isActive = false
+            updatedDevice.quantity = 0
+          }
+        }
+        
+        return updatedDevice
+      })
+      
+      // Check if there are actual changes before updating
+      const hasChanges = autoCalculatedDevices.some((device, index) => {
+        const current = supportDevices[index]
+        return current && (
+          device.isActive !== current.isActive || 
+          device.quantity !== current.quantity
+        )
+      })
+      
+      if (hasChanges) {
+        setSupportDevices(autoCalculatedDevices)
+      } else {
+      }
+    } else {
+    }
+  }, [contractType, fullUsers, intuneOnboardingActive, supportDevices.length])
+
+
+  useEffect(() => {
+    // Always include monthly services in calculations if any have meaningful values
+    const hasActiveMonthlyServices = monthlyServices.fixedCostTools.some(tool => tool.isActive && tool.extendedPrice > 0) || 
+                                   monthlyServices.variableCostTools.some(tool => tool.isActive && tool.extendedPrice > 0)
     const monthlyServicesForCalculation = hasActiveMonthlyServices ? monthlyServices : undefined
-    const newCalculations = calculateQuote(customer, [], setupServices, monthlyServicesForCalculation)
+    const newCalculations = calculateQuote(customer, [], setupServices, monthlyServicesForCalculation, undefined, upfrontPayment, supportDevices, otherLaborData)
     setCalculations(newCalculations)
-  }, [customer, setupServices, monthlyServices, currentStep])
+  }, [customer, setupServices, monthlyServices, upfrontPayment, supportDevices, otherLaborData, currentStep])
 
   // Calculate main content height for quote summary max height
   useEffect(() => {
@@ -93,14 +203,14 @@ export function QuoteWizard() {
         {/* Progress Bar */}
         <div className="mb-6">
           <div className="flex items-center justify-between text-sm text-gray-600 mb-2">
-            <span>Step {currentStep} of 2</span>
-            <span>{currentStep === 1 ? 'Quote Setup' : 'Monthly Services'}</span>
+            <span>Step {currentStep} of 3</span>
+            <span>{currentStep === 1 ? 'Quote Setup' : currentStep === 2 ? 'Monthly Services' : 'Review & Discount'}</span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2">
             <div 
               className="h-2 rounded-full transition-all duration-300 ease-in-out"
               style={{ 
-                width: `${(currentStep / 2) * 100}%`,
+                width: `${(currentStep / 3) * 100}%`,
                 backgroundColor: '#15bef0'
               }}
             ></div>
@@ -117,7 +227,6 @@ export function QuoteWizard() {
             }`}
             style={currentStep === 1 ? { borderBottomColor: '#15bef0', color: '#0891b2' } : {}}
           >
-            {currentStep > 1 && <span className="mr-2 text-green-500">✓</span>}
             Customer Info & Setup Services
           </button>
           <button
@@ -134,6 +243,18 @@ export function QuoteWizard() {
           >
             Monthly Managed Services
           </button>
+          
+          <button
+            onClick={() => setCurrentStep(3)}
+            className={`pb-2 border-b-2 font-medium text-sm flex items-center ${
+              currentStep === 3
+                ? 'text-gray-500 hover:text-gray-700 cursor-pointer'
+                : 'border-transparent text-gray-500 hover:text-gray-700 cursor-pointer'
+            }`}
+            style={currentStep === 3 ? { borderBottomColor: '#15bef0', color: '#0891b2' } : {}}
+          >
+            Review & Discount
+          </button>
         </nav>
       </div>
 
@@ -141,7 +262,13 @@ export function QuoteWizard() {
       {currentStep === 1 && (
         <div className="space-y-6">
           <CustomerForm value={customer} onChange={handleCustomerChange} />
-          <SetupServiceSelector setupServices={setupServices} customer={customer} onChange={handleSetupServicesChange} />
+          <SetupServiceSelector 
+            setupServices={setupServices} 
+            customer={customer} 
+            upfrontPayment={upfrontPayment}
+            onChange={handleSetupServicesChange} 
+            onUpfrontPaymentChange={setUpfrontPayment}
+          />
           
           {/* Continue Button */}
           <div className="flex justify-end">
@@ -200,17 +327,6 @@ export function QuoteWizard() {
               >
                 <span className="w-4 inline-block text-center mr-2">⬢</span>Other Labor
               </button>
-              <button
-                onClick={() => setCurrentMonthlyTab('haas')}
-                className={`py-2 px-1 border-b-2 font-medium text-sm cursor-pointer ${
-                  currentMonthlyTab === 'haas'
-                    ? 'text-white'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-                style={currentMonthlyTab === 'haas' ? { borderBottomColor: '#15bef0', color: '#0891b2' } : {}}
-              >
-                <span className="w-4 inline-block text-center mr-2">▢</span>HaaS
-              </button>
             </nav>
           </div>
 
@@ -218,50 +334,183 @@ export function QuoteWizard() {
           {currentMonthlyTab === 'tools' && (
             <MonthlyServicesSelector 
               monthlyServices={monthlyServices} 
+              customer={customer}
               onChange={handleMonthlyServicesChange} 
             />
           )}
 
           {currentMonthlyTab === 'support' && (
             <SupportLaborSelector 
-              devices={supportDevices} 
-              onChange={setSupportDevices} 
+              devices={supportDevices}
+              onChange={handleSupportDevicesChange}
+              customer={customer}
+              setupServices={setupServices}
             />
           )}
 
           {currentMonthlyTab === 'other' && (
-            <div className="bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-200 rounded-lg p-8 text-center">
-              <div className="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center" style={{ backgroundColor: '#15bef0' }}>
-                <span className="text-white text-2xl">⬢</span>
-              </div>
-              <h4 className="text-lg font-semibold text-gray-900 mb-2">Other Labor Configuration</h4>
-              <p className="text-gray-600 mb-4">Additional professional services and project work</p>
-              <div className="text-sm text-purple-600 bg-purple-100 rounded-full px-3 py-1 inline-block">
-                Coming Soon
-              </div>
-            </div>
+            <OtherLaborSelector
+              otherLaborData={otherLaborData}
+              onChange={setOtherLaborData}
+            />
           )}
 
-          {currentMonthlyTab === 'haas' && (
-            <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-lg p-8 text-center">
-              <div className="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center" style={{ backgroundColor: '#15bef0' }}>
-                <span className="text-white text-2xl">▢</span>
-              </div>
-              <h4 className="text-lg font-semibold text-gray-900 mb-2">Hardware as a Service</h4>
-              <p className="text-gray-600 mb-4">Managed hardware solutions and device lifecycle management</p>
-              <div className="text-sm text-green-600 bg-green-100 rounded-full px-3 py-1 inline-block">
-                Coming Soon
-              </div>
-            </div>
-          )}
 
           {/* Navigation */}
           <div className="flex justify-between">
+            {/* Left button - Back to Setup or Previous Tab */}
+            {currentMonthlyTab === 'tools' ? (
+              <button
+                onClick={() => setCurrentStep(1)}
+                className="px-6 py-2 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 cursor-pointer"
+              >
+                ← Back to Setup Services
+              </button>
+            ) : currentMonthlyTab === 'support' ? (
+              <button
+                onClick={() => setCurrentMonthlyTab('tools')}
+                className="px-6 py-2 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 cursor-pointer"
+              >
+                ← Back to Tools & Licensing
+              </button>
+            ) : (
+              <button
+                onClick={() => setCurrentMonthlyTab('support')}
+                className="px-6 py-2 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 cursor-pointer"
+              >
+                ← Back to Support Labor
+              </button>
+            )}
+
+            {/* Right button - Next Tab or Review */}
+            {currentMonthlyTab === 'tools' ? (
+              <button 
+                onClick={() => setCurrentMonthlyTab('support')}
+                className="px-6 py-2 text-white rounded-lg font-medium hover:opacity-90 cursor-pointer"
+                style={{ backgroundColor: '#15bef0' }}
+              >
+                Continue to Support Labor →
+              </button>
+            ) : currentMonthlyTab === 'support' ? (
+              <button 
+                onClick={() => setCurrentMonthlyTab('other')}
+                className="px-6 py-2 text-white rounded-lg font-medium hover:opacity-90 cursor-pointer"
+                style={{ backgroundColor: '#15bef0' }}
+              >
+                Continue to Other Labor →
+              </button>
+            ) : (
+              <button 
+                onClick={() => setCurrentStep(3)}
+                className="px-6 py-2 text-white rounded-lg font-medium hover:opacity-90 cursor-pointer"
+                style={{ backgroundColor: '#15bef0' }}
+              >
+                Review & Finalize →
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Step 3: Review & Discount */}
+      {currentStep === 3 && (
+        <div className="space-y-6">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Review & Finalize Quote</h2>
+            
+            {/* Quote Summary */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div>
+                <h3 className="text-lg font-medium text-gray-900 mb-3">Quote Summary</h3>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span>Monthly Recurring Revenue:</span>
+                    <span className="font-medium">{formatCurrency(calculations?.totals.monthlyTotal || 0)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Contract Length:</span>
+                    <span>{customer.contractMonths} months</span>
+                  </div>
+                  <div className="flex justify-between border-t pt-2 text-base font-semibold">
+                    <span>Total Contract Value:</span>
+                    <span style={{ color: '#15bef0' }}>{formatCurrency(calculations?.totals.contractTotal || 0)}</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div>
+                <h3 className="text-lg font-medium text-gray-900 mb-3">Adjustments</h3>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Discount %
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="1"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                      placeholder="0"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Upfront Payment
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={upfrontPayment}
+                      onChange={(e) => setUpfrontPayment(parseFloat(e.target.value) || 0)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                      placeholder="0.00"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Setup Services Detail */}
+            {calculations && calculations.totals.setupCosts > 0 && (
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <h3 className="text-lg font-medium text-gray-900 mb-3">Setup Services Detail</h3>
+                <div className="space-y-2 text-sm">
+                  {calculations.setupServices.filter(service => service.isActive).map(service => (
+                    <div key={service.id} className="flex justify-between">
+                      <span>{service.name}</span>
+                      <span>{formatCurrency(service.price || 0)}</span>
+                    </div>
+                  ))}
+                  <div className="flex justify-between border-t pt-2 font-medium">
+                    <span>Total Setup Costs:</span>
+                    <span>{formatCurrency(calculations.totals.setupCosts)}</span>
+                  </div>
+                  {upfrontPayment > 0 && (
+                    <>
+                      <div className="flex justify-between text-green-600">
+                        <span>Upfront Payment:</span>
+                        <span>-{formatCurrency(upfrontPayment)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Added to Monthly:</span>
+                        <span>{formatCurrency(calculations.totals.deferredSetupMonthly)}</span>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+          
+          {/* Navigation */}
+          <div className="flex justify-between">
             <button
-              onClick={() => setCurrentStep(1)}
+              onClick={() => setCurrentStep(2)}
               className="px-6 py-2 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 cursor-pointer"
             >
-              ← Back to Setup Services
+              ← Back to Monthly Services
             </button>
             <button 
               className="px-6 py-2 text-white rounded-lg font-medium hover:opacity-90 cursor-pointer"

@@ -30,14 +30,14 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
       {/* Mobile backdrop */}
       {isOpen && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden" 
+          className="fixed inset-0 bg-gray-900 bg-opacity-20 z-40 lg:hidden transition-opacity duration-300"
           onClick={() => setIsOpen(false)}
         />
       )}
 
       {/* Sidebar */}
       <div className={`
-        fixed inset-y-0 left-0 z-50 w-64 shadow-lg transform transition-transform duration-300 ease-in-out
+        fixed inset-y-0 left-0 z-50 w-64 shadow-xl transform transition-all duration-300 ease-out
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
         lg:translate-x-0 lg:static lg:inset-0
       `} style={{ backgroundColor: '#343333' }}>
@@ -51,9 +51,9 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
             />
             <button
               onClick={() => setIsOpen(false)}
-              className="lg:hidden p-2 rounded-md text-gray-300 hover:text-white"
+              className="lg:hidden p-2 rounded-md text-gray-300 hover:text-white transition-all duration-200 hover:scale-110 hover:rotate-90"
             >
-              ✕
+              <span className="text-xl">✕</span>
             </button>
           </div>
 

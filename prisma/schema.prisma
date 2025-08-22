@@ -16,11 +16,15 @@ datasource db {
 
 model User {
   id        String   @id @default(cuid())
-  email     String   @unique
+  username  String   @unique
+  email     String?  // Optional for now
   name      String
   password  String
+  role      String   @default("sales") // "admin", "sales"
+  isActive  Boolean  @default(true)
   quotes    Quote[]
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Quote {
@@ -167,4 +171,34 @@ model ServiceHoursSyncLog {
   errorMessage    String?
   syncData        Json?    // Store summary data
   syncedAt        DateTime @default(now())
+}
+
+// Support Labor Configuration Models
+model SupportDevice {
+  id                String            @id @default(cuid())
+  deviceId          String            @unique  // 'domain-controllers', 'ms-intune-mgmt', etc.
+  name              String            // 'Domain Controllers', 'MS InTune Mgmt', etc.
+  defaultSkillLevel Int               @default(2) // 1, 2, or 3
+  isActive          Boolean           @default(true)
+  
+  // Predictable maintenance hours
+  predictableOnsiteBusiness     Float @default(0)
+  predictableRemoteBusiness     Float @default(0)
+  predictableOnsiteAfterHours   Float @default(0)
+  predictableRemoteAfterHours   Float @default(0)
+  
+  // Reactive maintenance hours  
+  reactiveOnsiteBusiness        Float @default(0)
+  reactiveRemoteBusiness        Float @default(0)
+  reactiveOnsiteAfterHours      Float @default(0)
+  reactiveRemoteAfterHours      Float @default(0)
+  
+  // Emergency service hours
+  emergencyOnsiteBusiness       Float @default(0)
+  emergencyRemoteBusiness       Float @default(0)
+  emergencyOnsiteAfterHours     Float @default(0)
+  emergencyRemoteAfterHours     Float @default(0)
+  
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
 }
