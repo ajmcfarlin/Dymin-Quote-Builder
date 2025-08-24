@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useState } from 'react'
 import { Info, Plus, Trash2 } from 'lucide-react'
 import { MonthlyServicesData, VariableCostTool } from '@/types/monthlyServices'
 import { CustomerInfo } from '@/types/quote'
@@ -31,7 +31,7 @@ export function MonthlyServicesSelector({ monthlyServices, customer, onChange }:
   }
 
   // List of optional tools that can be manually edited
-  const optionalToolIds = ['4181', '3410', '3522', '3415', '4164', '3914']
+  const optionalToolIds = ['4181', '3410', '3522', '3415', '4164', '3914', '3439', '3440', '3438', '3445', '3446']
   
   // Check if a tool is optional (manually editable)
   const isOptionalTool = (toolId: string): boolean => {
@@ -46,25 +46,34 @@ export function MonthlyServicesSelector({ monthlyServices, customer, onChange }:
   // Get tooltip text explaining how quantity is calculated
   const getQuantityTooltip = (toolId: string): string => {
     switch (toolId) {
-      case '3433': return 'Calculated from infrastructure: workstations count'
-      case '3427': return 'Calculated from infrastructure: servers count'
-      case '3425': return 'Calculated from infrastructure: WiFi access points count'
-      case '3421': return 'Calculated from infrastructure: firewalls count'
-      case '3426': return 'Calculated from infrastructure: printers count'
-      case '3423': return 'Calculated from infrastructure: switches count'
-      case '3428': return 'Calculated from infrastructure: UPS count'
-      case '3414': return 'Calculated from infrastructure: workstations + servers'
-      case '3516': return 'Calculated from users: full users + email only users'
-      case '3464': return 'Calculated from infrastructure: servers count'
-      case '3506': return 'Calculated from infrastructure: workstations + servers'
-      case '3586': return 'Calculated from users: full users + email only users'
-      case '3420': return 'Calculated from infrastructure: NAS count'
-      case '3810': return 'Calculated from infrastructure: managed mobile devices count'
-      case '3418': return 'Fixed quantity: always 1 per environment'
-      case '3413': return 'Calculated from infrastructure: domains used for email'
-      case '3412': return 'Calculated from infrastructure: domains used for email'
-      case '4181': case '3410': case '3522': case '3415': case '4164': case '3914':
-        return 'Optional service: quantity can be manually set as needed'
+      case '3433': return 'Calculated from workstation count in customer info'
+      case '3427': return 'Calculated from server count in customer info'
+      case '3425': return 'Calculated from wifi access point count in customer info'
+      case '3421': return 'Calculated from firewall count in customer info'
+      case '3426': return 'Calculated from printer count in customer info'
+      case '3423': return 'Calculated from network switch count in customer info'
+      case '3428': return 'Calculated from UPS count in customer info'
+      case '3414': return 'Calculated from total workstations and servers'
+      case '3516': return 'Calculated from total full and email-only users'
+      case '3464': return 'Calculated from server count in customer info'
+      case '3506': return 'Calculated from total workstations and servers'
+      case '3586': return 'Calculated from total full and email-only users'
+      case '3420': return 'Calculated from NAS device count in customer info'
+      case '3810': return 'Calculated from managed mobile device count'
+      case '3418': return 'Always set to 1 per environment'
+      case '3413': return 'Calculated from domains used for email count'
+      case '3412': return 'Calculated from domains used for email count'
+      case '4181': return 'Manually entered - set quantity as needed'
+      case '3410': return 'Manually entered - set quantity as needed'
+      case '3522': return 'Manually entered - set quantity as needed'
+      case '3415': return 'Manually entered - set quantity as needed'
+      case '4164': return 'Manually entered - set quantity as needed'
+      case '3914': return 'Manually entered - set quantity as needed'
+      case '3439': return 'Manually entered - set quantity as needed'
+      case '3440': return 'Manually entered - set quantity as needed'
+      case '3438': return 'Manually entered - set quantity as needed'
+      case '3445': return 'Manually entered - set quantity as needed'
+      case '3446': return 'Manually entered - set quantity as needed'
       default: 
         if (toolId.startsWith('custom_')) {
           return 'Custom item: quantity can be manually set as needed'
@@ -73,94 +82,9 @@ export function MonthlyServicesSelector({ monthlyServices, customer, onChange }:
     }
   }
 
-  // Calculate quantities based on infrastructure data
-  const calculateQuantityForTool = (tool: VariableCostTool): number => {
-    const infra = customer.infrastructure
-    const users = customer.users
-    
-    switch (tool.id) {
-      case '3433': // Managed Workstation
-        return infra.workstations
-      case '3427': // Managed Server
-        return infra.servers
-      case '3425': // Managed Network WiFi Access Point
-        return infra.wifiAccessPoints
-      case '3421': // Managed Network Firewall
-        return infra.firewalls
-      case '3426': // Managed Printer
-        return infra.printers
-      case '3423': // Managed Network Switch
-        return infra.switches
-      case '3428': // Managed UPS
-        return infra.ups
-      case '3414': // Huntress (workstations and servers)
-        return infra.workstations + infra.servers
-      case '3516': // Huntress 365 (full and email only users)
-        return users.full + users.emailOnly
-      case '3464': // NinjaBackup (servers)
-        return infra.servers
-      case '3506': // ThreatLocker (workstations and servers)
-        return infra.workstations + infra.servers
-      case '3586': // SaaS Backup (full and email only users)
-        return users.full + users.emailOnly
-      case '3420': // Managed NAS
-        return infra.nas
-      case '3810': // Managed Mobile Device
-        return infra.managedMobileDevices
-      case '3418': // Longard (always 1)
-        return 1
-      case '3413': // Domain (domains used for email)
-        return infra.domainsUsedForEmail
-      case '3412': // DNS (domains used for email)
-        return infra.domainsUsedForEmail
-      case '4181': // IT Password (optional, default 0)
-      case '3410': // Duo (optional, default 0)
-      case '3522': // Infima (optional, default 0)
-      case '3415': // INKY Outbound Mail Protect (optional, default 0)
-      case '4164': // INKY Outbound Mail Protect (optional, default 0)
-      case '3914': // Microsoft 365 (optional, default 0)
-        return 0
-      default:
-        return 0
-    }
-  }
+  // Quantity calculation is now handled in QuoteContext
 
-  // Auto-populate quantities when customer data changes
-  useEffect(() => {
-    const updatedTools = monthlyServices.variableCostTools.map(tool => {
-      // Don't auto-calculate quantities for custom tools
-      if (isCustomTool(tool.id)) {
-        return tool
-      }
-      
-      const calculatedQuantity = calculateQuantityForTool(tool)
-      const updatedTool = { ...tool, nodesUnitsSupported: calculatedQuantity }
-      
-      // Recalculate costs and prices
-      if (updatedTool.costPerNodeUnit) {
-        updatedTool.extendedCost = updatedTool.nodesUnitsSupported * updatedTool.costPerNodeUnit
-        if (updatedTool.pricePerNodeUnit) {
-          updatedTool.extendedPrice = updatedTool.nodesUnitsSupported * updatedTool.pricePerNodeUnit
-        }
-      } else if (updatedTool.costPerCustomer) {
-        updatedTool.extendedCost = updatedTool.costPerCustomer
-        if (updatedTool.pricePerNodeUnit) {
-          updatedTool.extendedPrice = updatedTool.pricePerNodeUnit
-        }
-      }
-      
-      // Calculate margin
-      if (updatedTool.extendedPrice > 0) {
-        updatedTool.margin = ((updatedTool.extendedPrice - updatedTool.extendedCost) / updatedTool.extendedPrice) * 100
-      } else {
-        updatedTool.margin = 0
-      }
-      
-      return updatedTool
-    })
-    
-    onChange({ ...monthlyServices, variableCostTools: updatedTools })
-  }, [customer.infrastructure, customer.users])
+  // Auto-calculation is now handled in QuoteContext, so this useEffect is removed
 
   // Variable cost tools handlers
 

@@ -87,5 +87,10 @@ export interface QuoteCalculation {
     
     // Contract totals
     contractTotal: number
+  
+  // Discount information
+  discountType?: 'none' | 'percentage' | 'override'
+  discountValue?: number // Percentage (e.g., 10 for 10%) or override amount
+  discountedTotal?: number
   }
 }

@@ -52,7 +52,9 @@ const authOptions: NextAuthOptions = {
     })
   ],
   session: {
-    strategy: 'jwt'
+    strategy: 'jwt',
+    maxAge: 30 * 24 * 60 * 60, // 30 days
+    updateAge: 24 * 60 * 60, // Refresh token daily
   },
   pages: {
     signIn: '/login'
@@ -67,8 +69,8 @@ const authOptions: NextAuthOptions = {
       return token
     },
     async session({ session, token }) {
-      if (token) {
-        session.user.id = token.id as string
+      if (token && session.user) {
+        (session.user as any).id = token.id as string
         ;(session.user as any).username = token.username
         ;(session.user as any).role = token.role
       }

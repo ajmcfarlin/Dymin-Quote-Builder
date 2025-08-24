@@ -40,7 +40,5 @@ export interface VariableCostTool {
 }
 
 export interface MonthlyServicesData {
-  ncentral: NCentralConfig
-  fixedCostTools: FixedCostTool[]
   variableCostTools: VariableCostTool[]
 }

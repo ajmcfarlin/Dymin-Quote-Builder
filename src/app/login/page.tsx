@@ -19,6 +19,14 @@ export default function LoginPage() {
     setError('')
 
     try {
+      // Check rate limit first
+      const rateLimitCheck = await fetch('/api/auth/rate-limit', { method: 'POST' })
+      if (rateLimitCheck.status === 429) {
+        const rateLimitError = await rateLimitCheck.json()
+        setError(rateLimitError.error)
+        return
+      }
+
       const result = await signIn('credentials', {
         username,
         password,
@@ -159,11 +167,6 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <div className="mt-6 text-center">
-            <p className="text-sm text-gray-400">
-              Demo credentials: admin / admin123, sales / sales123, john / john123
-            </p>
-          </div>
         </div>
       </div>
     </div>
