@@ -1,96 +1,5 @@
-import { FixedCostTool, VariableCostTool, NCentralConfig, MonthlyServicesData } from '@/types/monthlyServices'
+import { VariableCostTool, MonthlyServicesData } from '@/types/monthlyServices'
 
-export function calculateNCentralCostPerDevice(config: NCentralConfig): number {
-  if (config.totalDeviceLicenses === 0) return 0
-  
-  let baseCostPerDevice = 0
-  
-  switch (config.contractStructure) {
-    case 'Purchase':
-      if (config.leaseLength === 0) return 0
-      baseCostPerDevice = config.totalInitialPurchasePrice / config.totalDeviceLicenses / config.leaseLength
-      break
-    case 'Lease':
-      baseCostPerDevice = config.monthlyLeasePayment / config.totalDeviceLicenses
-      break
-    case 'Subscription':
-      baseCostPerDevice = config.monthlySubscriptionPayment / config.totalDeviceLicenses
-      break
-  }
-  
-  return baseCostPerDevice + (config.additionalSupport / config.totalDeviceLicenses)
-}
-
-export const DEFAULT_NCENTRAL_CONFIG: NCentralConfig = {
-  contractStructure: 'Lease',
-  licensingStructure: 'Device',
-  totalDeviceLicenses: 1500,
-  totalInitialPurchasePrice: 0,
-  monthlyLeasePayment: 1275.00,
-  monthlySubscriptionPayment: 0,
-  leaseLength: 36,
-  devicesMonitored: 30,
-  costPerDevice: 0.85, // Will be calculated dynamically
-  additionalSupport: 0
-}
-
-export const DEFAULT_FIXED_COST_TOOLS: FixedCostTool[] = [
-  {
-    id: 'ncentral-customer-license',
-    name: 'N-central (Customer License)',
-    isActive: true,
-    customersSupported: 0,
-    monthlyAmortizedCost: 0,
-    costPerCustomerPerMonth: 0,
-    markup: 0,
-    extendedPrice: 0,
-    margin: 0
-  },
-  {
-    id: 'connectwise',
-    name: 'ConnectWise',
-    isActive: true,
-    customersSupported: 0,
-    monthlyAmortizedCost: 4500,
-    costPerCustomerPerMonth: 0,
-    markup: 20,
-    extendedPrice: 0,
-    margin: 0
-  },
-  {
-    id: 'remote-control',
-    name: 'Remote Control',
-    isActive: true,
-    customersSupported: 0,
-    monthlyAmortizedCost: 209,
-    costPerCustomerPerMonth: 0,
-    markup: 20,
-    extendedPrice: 0,
-    margin: 0
-  },
-  {
-    id: 'crm',
-    name: 'CRM',
-    isActive: true,
-    customersSupported: 0,
-    monthlyAmortizedCost: 190,
-    costPerCustomerPerMonth: 0,
-    markup: 20,
-    extendedPrice: 0,
-    margin: 0
-  },
-  {
-    id: 'quickpass',
-    name: 'QuickPass',
-    isActive: true,
-    customersSupported: 0,
-    monthlyAmortizedCost: 600,
-    costPerCustomerPerMonth: 0,
-    markup: 0,
-    extendedPrice: 0,
-    margin: 0
-  }
-]
 
 export const DEFAULT_VARIABLE_COST_TOOLS: VariableCostTool[] = [
   {
@@ -316,7 +225,7 @@ export const DEFAULT_VARIABLE_COST_TOOLS: VariableCostTool[] = [
   },
   {
     id: '3415',
-    name: 'INKY Outbound Mail Protect',
+    name: 'INKY Inbound Mail Protect',
     isActive: true, // Optional - Manually entered count
     nodesUnitsSupported: 0,
     costPerNodeUnit: 1.60,
@@ -338,7 +247,7 @@ export const DEFAULT_VARIABLE_COST_TOOLS: VariableCostTool[] = [
   },
   {
     id: '3914',
-    name: 'Microsoft 365',
+    name: 'INKY Email Signature',
     isActive: true, // Optional - Manually entered count
     nodesUnitsSupported: 0,
     costPerNodeUnit: 18.48,
@@ -346,12 +255,65 @@ export const DEFAULT_VARIABLE_COST_TOOLS: VariableCostTool[] = [
     pricePerNodeUnit: 22.00,
     extendedPrice: 0,
     margin: 16.0
+  },
+  {
+    id: '3439',
+    name: 'Microsoft 365 Business Premium [New Commerce Experience]',
+    isActive: true, // Optional - Manually entered count
+    nodesUnitsSupported: 0,
+    costPerNodeUnit: 18.48,
+    extendedCost: 0,
+    pricePerNodeUnit: 22.00,
+    extendedPrice: 0,
+    margin: 16.0
+  },
+  {
+    id: '3440',
+    name: 'Microsoft 365 Business Standard [New Commerce Experience]',
+    isActive: true, // Optional - Manually entered count
+    nodesUnitsSupported: 0,
+    costPerNodeUnit: 14.40,
+    extendedCost: 0,
+    pricePerNodeUnit: 18.00,
+    extendedPrice: 0,
+    margin: 20.0
+  },
+  {
+    id: '3438',
+    name: 'Microsoft 365 Business Basic [New Commerce Experience]',
+    isActive: true, // Optional - Manually entered count
+    nodesUnitsSupported: 0,
+    costPerNodeUnit: 4.80,
+    extendedCost: 0,
+    pricePerNodeUnit: 6.00,
+    extendedPrice: 0,
+    margin: 20.0
+  },
+  {
+    id: '3445',
+    name: 'Exchange Online (Plan 1) [New Commerce Experience]',
+    isActive: true, // Optional - Manually entered count
+    nodesUnitsSupported: 0,
+    costPerNodeUnit: 3.20,
+    extendedCost: 0,
+    pricePerNodeUnit: 4.00,
+    extendedPrice: 0,
+    margin: 20.0
+  },
+  {
+    id: '3446',
+    name: 'Exchange Online (Plan 2) [New Commerce Experience]',
+    isActive: true, // Optional - Manually entered count
+    nodesUnitsSupported: 0,
+    costPerNodeUnit: 6.40,
+    extendedCost: 0,
+    pricePerNodeUnit: 8.00,
+    extendedPrice: 0,
+    margin: 20.0
   }
 ]
 
 export const DEFAULT_MONTHLY_SERVICES_DATA: MonthlyServicesData = {
-  ncentral: DEFAULT_NCENTRAL_CONFIG,
-  fixedCostTools: DEFAULT_FIXED_COST_TOOLS,
   variableCostTools: DEFAULT_VARIABLE_COST_TOOLS
 }
 
@@ -401,9 +363,14 @@ export function calculateToolQuantityFromInfrastructure(toolId: string, infrastr
     case '4181': // IT Password (optional, default 0)
     case '3410': // Duo (optional, default 0)
     case '3522': // Infima (optional, default 0)
-    case '3415': // INKY Outbound Mail Protect (optional, default 0)
+    case '3415': // INKY Inbound Mail Protect (optional, default 0)
     case '4164': // INKY Outbound Mail Protect (optional, default 0)
-    case '3914': // Microsoft 365 (optional, default 0)
+    case '3914': // INKY Email Signature (optional, default 0)
+    case '3439': // Microsoft 365 Business Premium [New Commerce Experience] (optional, default 0)
+    case '3440': // Microsoft 365 Business Standard [New Commerce Experience] (optional, default 0)
+    case '3438': // Microsoft 365 Business Basic [New Commerce Experience] (optional, default 0)
+    case '3445': // Exchange Online (Plan 1) [New Commerce Experience] (optional, default 0)
+    case '3446': // Exchange Online (Plan 2) [New Commerce Experience] (optional, default 0)
       return 0
     default:
       return 0
@@ -412,7 +379,7 @@ export function calculateToolQuantityFromInfrastructure(toolId: string, infrastr
 
 // Check if a tool is optional (manually editable)
 export function isOptionalTool(toolId: string): boolean {
-  const optionalToolIds = ['4181', '3410', '3522', '3415', '4164', '3914']
+  const optionalToolIds = ['4181', '3410', '3522', '3415', '4164', '3914', '3439', '3440', '3438', '3445', '3446']
   return optionalToolIds.includes(toolId) || toolId.startsWith('custom_')
 }
 

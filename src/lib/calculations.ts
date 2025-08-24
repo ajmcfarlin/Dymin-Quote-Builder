@@ -87,15 +87,11 @@ export function calculateWarranty(customer: CustomerInfo): number {
 export function calculateMonthlyServicesTotal(monthlyServices?: MonthlyServicesData): number {
   if (!monthlyServices) return 0
   
-  const fixedTotal = monthlyServices.fixedCostTools
-    .filter(tool => tool.isActive && tool.extendedPrice > 0)
-    .reduce((sum, tool) => sum + tool.extendedPrice, 0)
-  
   const variableTotal = monthlyServices.variableCostTools
     .filter(tool => tool.isActive && tool.extendedPrice > 0)
     .reduce((sum, tool) => sum + tool.extendedPrice, 0)
   
-  return fixedTotal + variableTotal
+  return variableTotal
 }
 
 interface SupportDevice {
@@ -155,17 +151,11 @@ export function calculateSupportDevicesLabor(supportDevices: SupportDevice[] = [
 export function calculateOtherLabor(otherLaborData?: OtherLaborData): number {
   if (!otherLaborData) return 0
   
-  // Calculate monthly services total
-  const monthlyTotal = otherLaborData.monthlyServices
-    .filter(service => service.isActive)
-    .reduce((sum, service) => sum + service.extendedPrice, 0)
+  // Only return the total of custom items that were actually added
+  // The percentage is just a reference/budget guide, not auto-calculated
+  const customItemsTotal = otherLaborData.customItems.reduce((sum, item) => sum + item.price, 0)
   
-  // Calculate incident-based services total
-  const incidentTotal = otherLaborData.incidentServices
-    .filter(service => service.isActive)
-    .reduce((sum, service) => sum + service.extendedPrice, 0)
-  
-  return monthlyTotal + incidentTotal
+  return customItemsTotal
 }
 
 export function calculateQuote(

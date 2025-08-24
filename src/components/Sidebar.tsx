@@ -60,7 +60,9 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
           {/* Navigation */}
           <nav className="flex-1 px-4 py-6 space-y-2">
             {navigation.map((item) => {
-              const isActive = pathname === item.href
+              const isActive = item.href === '/dashboard/quotes' 
+                ? pathname.startsWith('/dashboard/quotes')
+                : pathname === item.href
               return (
                 <Link
                   key={item.name}
@@ -87,17 +89,15 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
             <div className="flex items-center mb-4">
               <div className="flex-1">
                 <p className="text-sm font-medium text-white">{session?.user?.name}</p>
-                <p className="text-xs text-gray-300">{session?.user?.email}</p>
               </div>
             </div>
             <button
               onClick={handleLogout}
-              className="w-full flex items-center px-4 py-2 text-sm text-gray-300 hover:bg-gray-600 hover:text-white rounded-lg transition-colors"
+              className="w-full flex items-center px-2 py-2 text-sm text-gray-300 hover:bg-gray-600 hover:text-white rounded-lg transition-colors"
             >
               <span className="mr-3">↗</span>
               Sign out
             </button>
-            <div className='text-xs'>made with heart</div>
           </div>
         </div>
       </div>

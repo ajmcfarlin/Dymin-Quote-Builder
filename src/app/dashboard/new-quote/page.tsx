@@ -4,6 +4,7 @@ import { useSession } from 'next-auth/react'
 import { redirect } from 'next/navigation'
 import { DashboardLayout } from '@/components/DashboardLayout'
 import { QuoteWizard } from '@/components/QuoteWizard'
+import { QuoteProvider } from '@/contexts/QuoteContext'
 
 export default function NewQuotePage() {
   const { data: session, status } = useSession()
@@ -23,7 +24,9 @@ export default function NewQuotePage() {
           <h1 className="text-3xl font-bold text-gray-900">Create New Quote</h1>
           <p className="mt-2 text-gray-600">Generate a new managed services quote</p>
         </div>
-        <QuoteWizard />
+        <QuoteProvider>
+          <QuoteWizard />
+        </QuoteProvider>
       </div>
     </DashboardLayout>
   )

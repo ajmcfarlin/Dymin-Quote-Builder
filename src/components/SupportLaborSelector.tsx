@@ -1,10 +1,8 @@
 'use client'
 
-import React from 'react'
-import { Trash2 } from 'lucide-react'
+import React, { useState } from 'react'
+import { Trash2, ChevronDown, ChevronRight } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { DEFAULT_DEVICES, LocalSupportDevice } from '@/lib/defaultSupportDevices'
-
 interface SupportDevice {
   id: string
   name: string
@@ -40,18 +38,27 @@ interface SupportLaborSelectorProps {
   setupServices?: any[]
 }
 
-// DEFAULT_DEVICES is now imported from @/lib/defaultSupportDevices
+// Support device configuration is now handled in QuoteContext
 
-export { DEFAULT_DEVICES }
-
-export function SupportLaborSelector({ devices = DEFAULT_DEVICES, onChange }: SupportLaborSelectorProps) {
-  // This component no longer needs to initialize devices - QuoteWizard handles that
-  // useEffect and useSupportDevices removed to prevent conflicts with parent auto-calculation
+export function SupportLaborSelector({ devices = [], onChange }: SupportLaborSelectorProps) {
+  // Auto-calculation and device initialization is now handled in QuoteContext
+  const [expandedDevices, setExpandedDevices] = useState<Set<string>>(new Set())
+  
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD'
     }).format(amount)
+  }
+  
+  const toggleDeviceExpansion = (deviceId: string) => {
+    const newExpanded = new Set(expandedDevices)
+    if (newExpanded.has(deviceId)) {
+      newExpanded.delete(deviceId)
+    } else {
+      newExpanded.add(deviceId)
+    }
+    setExpandedDevices(newExpanded)
   }
 
   const toggleDevice = (deviceId: string) => {
@@ -195,12 +202,14 @@ export function SupportLaborSelector({ devices = DEFAULT_DEVICES, onChange }: Su
           
           {activeDevices.map((device) => {
             const deviceCosts = calculateDeviceCost(device)
+            const isExpanded = expandedDevices.has(device.id)
             return (
-              <Card key={device.id}>
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <CardTitle className="text-base">{device.name}</CardTitle>
+              <Card key={device.id} className="border border-gray-200">
+                <CardContent className="p-6">
+                  {/* Main Info Row */}
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-4">
+                      <h3 className="text-lg font-medium text-gray-900">{device.name}</h3>
                       {getSkillLevelBadge(device.skillLevel)}
                     </div>
                     <button
@@ -211,14 +220,13 @@ export function SupportLaborSelector({ devices = DEFAULT_DEVICES, onChange }: Su
                       <Trash2 size={16} />
                     </button>
                   </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+
+                  {/* Key Configuration - Always Visible */}
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4 p-4 bg-gray-50 rounded-lg">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Quantity
                       </label>
-                      {/* Make auto-calculated devices non-editable */}
                       {(device.name === 'MS InTune Mgmt' || device.name === 'Proactive Users' || device.name === 'Co-Managed Users') ? (
                         <span className="w-full px-3 py-2 text-sm text-gray-600 bg-gray-100 rounded border inline-block">
                           {device.quantity}
@@ -251,82 +259,109 @@ export function SupportLaborSelector({ devices = DEFAULT_DEVICES, onChange }: Su
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Total Hours/Month
+                        Hours/Month
                       </label>
-                      <div className="px-3 py-2 text-sm font-medium text-gray-900 bg-gray-50 rounded">
-                        {deviceCosts.totalHours.toFixed(2)} hrs per device
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Hours Breakdown */}
-                  <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-                    <h6 className="text-xs font-medium text-gray-700 mb-2">Hours Breakdown (per device):</h6>
-                    <div className="grid grid-cols-3 gap-4 text-xs">
-                      <div>
-                        <div className="font-medium text-green-700 mb-1">Predictable Maintenance</div>
-                        <div>Onsite Business: {device.hours.predictable.onsiteBusiness}</div>
-                        <div>Remote Business: {device.hours.predictable.remoteBusiness}</div>
-                        <div>Onsite After Hours: {device.hours.predictable.onsiteAfterHours}</div>
-                        <div>Remote After Hours: {device.hours.predictable.remoteAfterHours}</div>
-                      </div>
-                      <div>
-                        <div className="font-medium text-blue-700 mb-1">Reactive Maintenance</div>
-                        <div>Onsite Business: {device.hours.reactive.onsiteBusiness}</div>
-                        <div>Remote Business: {device.hours.reactive.remoteBusiness}</div>
-                        <div>Onsite After Hours: {device.hours.reactive.onsiteAfterHours}</div>
-                        <div>Remote After Hours: {device.hours.reactive.remoteAfterHours}</div>
-                      </div>
-                      <div>
-                        <div className="font-medium text-red-700 mb-1">Emergency Service</div>
-                        <div>Onsite Business: {device.hours.emergency.onsiteBusiness}</div>
-                        <div>Remote Business: {device.hours.emergency.remoteBusiness}</div>
-                        <div>Onsite After Hours: {device.hours.emergency.onsiteAfterHours}</div>
-                        <div>Remote After Hours: {device.hours.emergency.remoteAfterHours}</div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Cost/Price Breakdown by Service Type */}
-                  <div className="mb-4 p-3 bg-blue-50 rounded-lg">
-                    <h6 className="text-xs font-medium text-gray-700 mb-2">Cost & Price Breakdown (Qty: {device.quantity}):</h6>
-                    <div className="grid grid-cols-3 gap-4 text-xs">
-                      <div>
-                        <div className="font-medium text-green-700 mb-1">Predictable ({deviceCosts.breakdown.predictable.hours.toFixed(2)} hrs)</div>
-                        <div>Cost: {formatCurrency(deviceCosts.breakdown.predictable.cost)}</div>
-                        <div>Price: {formatCurrency(deviceCosts.breakdown.predictable.price)}</div>
-                      </div>
-                      <div>
-                        <div className="font-medium text-blue-700 mb-1">Reactive ({deviceCosts.breakdown.reactive.hours.toFixed(2)} hrs)</div>
-                        <div>Cost: {formatCurrency(deviceCosts.breakdown.reactive.cost)}</div>
-                        <div>Price: {formatCurrency(deviceCosts.breakdown.reactive.price)}</div>
-                      </div>
-                      <div>
-                        <div className="font-medium text-red-700 mb-1">Emergency ({deviceCosts.breakdown.emergency.hours.toFixed(2)} hrs)</div>
-                        <div>Cost: {formatCurrency(deviceCosts.breakdown.emergency.cost)}</div>
-                        <div>Price: {formatCurrency(deviceCosts.breakdown.emergency.price)}</div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-3 border-t border-gray-100">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-600 mb-1">
-                        Total Monthly Cost
-                      </label>
-                      <div className="px-3 py-2 text-sm text-gray-700 bg-gray-50 rounded">
-                        {formatCurrency(deviceCosts.cost)}
+                      <div className="px-3 py-2 text-sm font-medium text-gray-900 bg-white rounded border">
+                        {deviceCosts.totalHours.toFixed(2)} hrs
                       </div>
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-600 mb-1">
-                        Total Monthly Price
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Monthly Price
                       </label>
-                      <div className="px-3 py-2 text-sm font-semibold text-gray-900 bg-gray-100 rounded border">
+                      <div className="px-3 py-2 text-sm font-semibold text-gray-900 bg-white rounded border">
                         {formatCurrency(deviceCosts.price)}
                       </div>
                     </div>
+                  </div>
+
+                  {/* Expandable Details */}
+                  <div className="border-t pt-4">
+                    <button
+                      onClick={() => toggleDeviceExpansion(device.id)}
+                      className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
+                    >
+                      {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                      View detailed breakdown
+                    </button>
+
+                    {isExpanded && (
+                      <div className="mt-4 space-y-4">
+                        {/* Hours Breakdown */}
+                        <div className="p-4 bg-gray-50 rounded-lg">
+                          <h5 className="text-sm font-medium text-gray-900 mb-3">Hours Breakdown (per device)</h5>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                            <div className="space-y-2">
+                              <div className="font-medium text-gray-700">Predictable Maintenance</div>
+                              <div className="space-y-1 text-xs text-gray-600">
+                                <div>Onsite Business: {device.hours.predictable.onsiteBusiness}</div>
+                                <div>Remote Business: {device.hours.predictable.remoteBusiness}</div>
+                                <div>Onsite After Hours: {device.hours.predictable.onsiteAfterHours}</div>
+                                <div>Remote After Hours: {device.hours.predictable.remoteAfterHours}</div>
+                              </div>
+                            </div>
+                            <div className="space-y-2">
+                              <div className="font-medium text-gray-700">Reactive Maintenance</div>
+                              <div className="space-y-1 text-xs text-gray-600">
+                                <div>Onsite Business: {device.hours.reactive.onsiteBusiness}</div>
+                                <div>Remote Business: {device.hours.reactive.remoteBusiness}</div>
+                                <div>Onsite After Hours: {device.hours.reactive.onsiteAfterHours}</div>
+                                <div>Remote After Hours: {device.hours.reactive.remoteAfterHours}</div>
+                              </div>
+                            </div>
+                            <div className="space-y-2">
+                              <div className="font-medium text-gray-700">Emergency Service</div>
+                              <div className="space-y-1 text-xs text-gray-600">
+                                <div>Onsite Business: {device.hours.emergency.onsiteBusiness}</div>
+                                <div>Remote Business: {device.hours.emergency.remoteBusiness}</div>
+                                <div>Onsite After Hours: {device.hours.emergency.onsiteAfterHours}</div>
+                                <div>Remote After Hours: {device.hours.emergency.remoteAfterHours}</div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Cost Breakdown */}
+                        <div className="p-4 bg-gray-50 rounded-lg">
+                          <h5 className="text-sm font-medium text-gray-900 mb-3">Cost & Price Breakdown (Total for {device.quantity} devices)</h5>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                            <div className="space-y-2">
+                              <div className="font-medium text-gray-700">Predictable ({deviceCosts.breakdown.predictable.hours.toFixed(2)} hrs)</div>
+                              <div className="space-y-1 text-xs text-gray-600">
+                                <div>Cost: {formatCurrency(deviceCosts.breakdown.predictable.cost)}</div>
+                                <div>Price: {formatCurrency(deviceCosts.breakdown.predictable.price)}</div>
+                              </div>
+                            </div>
+                            <div className="space-y-2">
+                              <div className="font-medium text-gray-700">Reactive ({deviceCosts.breakdown.reactive.hours.toFixed(2)} hrs)</div>
+                              <div className="space-y-1 text-xs text-gray-600">
+                                <div>Cost: {formatCurrency(deviceCosts.breakdown.reactive.cost)}</div>
+                                <div>Price: {formatCurrency(deviceCosts.breakdown.reactive.price)}</div>
+                              </div>
+                            </div>
+                            <div className="space-y-2">
+                              <div className="font-medium text-gray-700">Emergency ({deviceCosts.breakdown.emergency.hours.toFixed(2)} hrs)</div>
+                              <div className="space-y-1 text-xs text-gray-600">
+                                <div>Cost: {formatCurrency(deviceCosts.breakdown.emergency.cost)}</div>
+                                <div>Price: {formatCurrency(deviceCosts.breakdown.emergency.price)}</div>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div className="grid grid-cols-2 gap-4 mt-4 pt-3 border-t border-gray-200">
+                            <div>
+                              <div className="text-xs text-gray-600">Total Monthly Cost</div>
+                              <div className="font-medium text-gray-900">{formatCurrency(deviceCosts.cost)}</div>
+                            </div>
+                            <div>
+                              <div className="text-xs text-gray-600">Total Monthly Price</div>
+                              <div className="font-medium text-gray-900">{formatCurrency(deviceCosts.price)}</div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>

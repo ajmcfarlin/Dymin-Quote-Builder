@@ -28,14 +28,61 @@ model User {
 }
 
 model Quote {
-  id           String   @id @default(cuid())
-  userId       String
-  user         User     @relation(fields: [userId], references: [id])
-  customerName String
-  quoteData    Json
-  totalCost    Float
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id])
+  
+  // Quote identification
+  quoteNumber   String?   @unique // Auto-generated quote number
+  version       Int       @default(1) // For quote versioning
+  
+  // Customer information
+  customerName  String
+  customerEmail String?
+  customerAddress String?
+  customerRegion  String?
+  
+  // Contract details
+  contractType  String?   // 'Managed Services', 'Co-Managed Services'
+  contractMonths Int      @default(36)
+  
+  // Quote data (comprehensive JSON structure)
+  customerData  Json      // Full CustomerInfo object
+  setupServices Json      // Array of SetupService objects
+  monthlyServices Json    // MonthlyServicesData object
+  supportDevices Json     // Array of support device configurations
+  otherLaborData Json     // OtherLaborData object
+  
+  // Financial summary
+  monthlyTotal    Float   @default(0)
+  setupCosts      Float   @default(0)
+  upfrontPayment  Float   @default(0)
+  contractTotal   Float   @default(0)
+  
+  // Discount information
+  discountType    String? // 'none', 'percentage', 'raw_dollar', 'margin_override', 'per_user', 'override'
+  discountValue   Float?  @default(0)
+  discountedTotal Float?  @default(0)
+  
+  // Margins and analysis (for internal use)
+  estimatedCost   Float?  @default(0)
+  profitMargin    Float?  @default(0)
+  
+  // External integrations
+  haloPsaQuoteId  String? // Reference to HaloPSA quote if generated
+  
+  // Metadata
+  notes           String? // Internal notes
+  clientNotes     String? // Notes visible to client
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([userId])
+  @@index([customerName])
+  @@index([createdAt])
+  @@index([userId, createdAt]) // Compound index for user's quotes ordered by date
+  @@index([customerName, createdAt]) // For search with date ordering
 }
 
 model Configuration {
