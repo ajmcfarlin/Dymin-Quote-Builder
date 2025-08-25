@@ -2,24 +2,41 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { PrismaClient } from '@/generated/prisma'
 import { HaloQuoteGenerationRequest, HaloQuoteResponse } from '@/types/savedQuote'
+import { authOptions } from '@/lib/auth.config'
 
 const prisma = new PrismaClient()
 
 // POST /api/quotes/[id]/generate-halo - Generate quote in Halo PSA
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession()
+    const resolvedParams = await params
+    const session = await getServerSession(authOptions)
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Get user from database
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email }
-    })
+    // Get user from database - try username first, fallback to email if needed
+    const username = (session.user as any).username
+    
+    let user
+    if (username) {
+      user = await prisma.user.findUnique({
+        where: { username }
+      })
+    } else if (session.user.email) {
+      // Fallback: find user by email if it matches username
+      user = await prisma.user.findFirst({
+        where: { 
+          OR: [
+            { username: session.user.email },
+            { email: session.user.email }
+          ]
+        }
+      })
+    }
     
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
@@ -28,7 +45,7 @@ export async function POST(
     // Get the quote
     const quote = await prisma.quote.findFirst({
       where: {
-        id: params.id,
+        id: resolvedParams.id,
         userId: user.id
       }
     })
@@ -86,8 +103,7 @@ export async function POST(
       
       // Additional data for Halo PSA
       notes: quote.notes,
-      clientNotes: quote.clientNotes,
-      expiresAt: quote.expiresAt
+      clientNotes: quote.clientNotes
     }
 
     // Simulate Halo PSA API call
@@ -111,11 +127,9 @@ export async function POST(
     if (haloResult.success) {
       // Update the quote with Halo PSA reference
       await prisma.quote.update({
-        where: { id: params.id },
+        where: { id: resolvedParams.id },
         data: {
-          haloPsaQuoteId: haloResult.haloPsaQuoteId,
-          status: body.sendToCustomer ? 'sent' : quote.status,
-          sentAt: body.sendToCustomer ? new Date() : quote.sentAt
+          haloPsaQuoteId: haloResult.haloPsaQuoteId
         }
       })
     }
@@ -143,18 +157,34 @@ export async function POST(
 // GET /api/quotes/[id]/generate-halo - Get Halo PSA quote status
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession()
+    const resolvedParams = await params
+    const session = await getServerSession(authOptions)
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Get user from database
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email }
-    })
+    // Get user from database - try username first, fallback to email if needed
+    const username = (session.user as any).username
+    
+    let user
+    if (username) {
+      user = await prisma.user.findUnique({
+        where: { username }
+      })
+    } else if (session.user.email) {
+      // Fallback: find user by email if it matches username
+      user = await prisma.user.findFirst({
+        where: { 
+          OR: [
+            { username: session.user.email },
+            { email: session.user.email }
+          ]
+        }
+      })
+    }
     
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
@@ -163,14 +193,13 @@ export async function GET(
     // Get the quote
     const quote = await prisma.quote.findFirst({
       where: {
-        id: params.id,
+        id: resolvedParams.id,
         userId: user.id
       },
       select: {
         id: true,
         quoteNumber: true,
-        haloPsaQuoteId: true,
-        status: true
+        haloPsaQuoteId: true
       }
     })
 
@@ -181,7 +210,7 @@ export async function GET(
     const response = {
       hasHaloQuote: !!quote.haloPsaQuoteId,
       haloPsaQuoteId: quote.haloPsaQuoteId,
-      status: quote.status,
+      status: 'generated', // Default status since we don't track status in Quote model
       // In a real implementation, you might fetch additional status from Halo PSA
       quoteUrl: quote.haloPsaQuoteId ? `https://your-halo-instance.com/quotes/${quote.haloPsaQuoteId}` : null
     }

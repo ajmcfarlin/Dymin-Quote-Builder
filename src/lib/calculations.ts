@@ -149,7 +149,7 @@ export function calculateSupportDevicesLabor(supportDevices: SupportDevice[] = [
 }
 
 export function calculateOtherLabor(otherLaborData?: OtherLaborData): number {
-  if (!otherLaborData) return 0
+  if (!otherLaborData || !otherLaborData.customItems) return 0
   
   // Only return the total of custom items that were actually added
   // The percentage is just a reference/budget guide, not auto-calculated

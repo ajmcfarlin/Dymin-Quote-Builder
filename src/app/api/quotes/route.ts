@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { PrismaClient } from '@/generated/prisma'
-import { CreateQuoteRequest, QuotesListResponse } from '@/types/savedQuote'
+import { CreateQuoteRequest, QuotesListResponse, QuoteListItem } from '@/types/savedQuote'
+import { authOptions } from '@/lib/auth.config'
 
 const prisma = new PrismaClient()
 
 // GET /api/quotes - List all quotes for the authenticated user
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession()
+    const session = await getServerSession(authOptions)
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -82,8 +83,18 @@ export async function GET(request: NextRequest) {
       prisma.quote.count({ where })
     ])
 
+    // Transform database result to match QuoteListItem interface
+    const transformedQuotes: QuoteListItem[] = quotes.map(quote => ({
+      ...quote,
+      quoteNumber: quote.quoteNumber || undefined,
+      user: quote.user ? {
+        name: quote.user.name,
+        email: quote.user.email || 'N/A'
+      } : undefined
+    }))
+
     const response: QuotesListResponse = {
-      quotes,
+      quotes: transformedQuotes,
       total,
       page,
       limit
@@ -99,7 +110,7 @@ export async function GET(request: NextRequest) {
 // POST /api/quotes - Create a new quote
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession()
+    const session = await getServerSession(authOptions)
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -170,11 +181,11 @@ export async function POST(request: NextRequest) {
         customerRegion: body.customerData.region,
         contractType: body.customerData.contractType,
         contractMonths: body.customerData.contractMonths,
-        customerData: body.customerData,
-        setupServices: body.setupServices,
-        monthlyServices: body.monthlyServices,
-        supportDevices: body.supportDevices,
-        otherLaborData: body.otherLaborData,
+        customerData: body.customerData as any,
+        setupServices: body.setupServices as any,
+        monthlyServices: body.monthlyServices as any,
+        supportDevices: body.supportDevices as any,
+        otherLaborData: body.otherLaborData as any,
         monthlyTotal: body.monthlyTotal,
         setupCosts: body.setupCosts,
         upfrontPayment: body.upfrontPayment,
@@ -184,8 +195,7 @@ export async function POST(request: NextRequest) {
         discountedTotal: body.discountedTotal,
         estimatedCost,
         profitMargin,
-        notes: body.notes,
-        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days from now
+        notes: body.notes
       }
     })
 

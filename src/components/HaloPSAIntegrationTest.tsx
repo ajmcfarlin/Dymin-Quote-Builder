@@ -33,7 +33,7 @@ export function HaloPSAIntegrationTest() {
       const data = await response.json()
 
       if (data.success) {
-        setResults(prev => ({
+        setResults((prev: any) => ({
           ...prev,
           templates: data.data
         }))
@@ -66,7 +66,7 @@ export function HaloPSAIntegrationTest() {
       const data = await response.json()
 
       if (data.success) {
-        setResults(prev => ({
+        setResults((prev: any) => ({
           ...prev,
           template46: data.data
         }))
@@ -99,7 +99,7 @@ export function HaloPSAIntegrationTest() {
       const data = await response.json()
 
       if (data.success) {
-        setResults(prev => ({
+        setResults((prev: any) => ({
           ...prev,
           agents: data.data
         }))
@@ -132,7 +132,7 @@ export function HaloPSAIntegrationTest() {
       const data = await response.json()
 
       if (data.success) {
-        setResults(prev => ({
+        setResults((prev: any) => ({
           ...prev,
           items: data.data
         }))
@@ -165,7 +165,7 @@ export function HaloPSAIntegrationTest() {
       const data = await response.json()
 
       if (data.success) {
-        setResults(prev => ({
+        setResults((prev: any) => ({
           ...prev,
           quote: data.data
         }))

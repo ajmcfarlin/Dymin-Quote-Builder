@@ -171,10 +171,10 @@ export function QuoteView({ quote }: QuoteViewProps) {
               </div>
             )}
 
-            {/* Monthly Services */}
+            {/* Tools & Software */}
             {quote.monthlyServices?.variableCostTools && (
               <div>
-                <h4 className="font-semibold text-gray-900 mb-3">Monthly Services</h4>
+                <h4 className="font-semibold text-gray-900 mb-3">Tools & Software</h4>
                 <div className="space-y-2">
                   {quote.monthlyServices.variableCostTools
                     .filter((tool: any) => tool.isActive && tool.nodesUnitsSupported > 0)
@@ -190,8 +190,37 @@ export function QuoteView({ quote }: QuoteViewProps) {
                       </div>
                     ))}
                   <div className="flex justify-between items-center py-2 bg-gray-50 px-3 rounded">
-                    <span className="font-semibold text-gray-900">Monthly Services Total:</span>
-                    <span className="font-semibold text-gray-900">{formatCurrency(quote.monthlyTotal)}</span>
+                    <span className="font-semibold text-gray-900">Tools & Software Total:</span>
+                    <span className="font-semibold text-gray-900">{formatCurrency(quote.monthlyServices.variableCostTools.filter((tool: any) => tool.isActive && tool.nodesUnitsSupported > 0).reduce((sum: number, tool: any) => sum + (tool.extendedPrice || 0), 0))}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Support Labor */}
+            {quote.supportDevices && quote.supportDevices.length > 0 && (
+              <div>
+                <h4 className="font-semibold text-gray-900 mb-3">Support Labor</h4>
+                <div className="space-y-2">
+                  {quote.supportDevices
+                    .filter((device: any) => device.isActive && device.quantity > 0)
+                    .map((device: any, index: number) => {
+                      const unitPrice = device.monthlyPrice || 0
+                      return (
+                        <div key={index} className="flex justify-between items-center py-2 border-b border-gray-100 last:border-b-0">
+                          <div className="flex-1">
+                            <span className="text-gray-700">{device.name}</span>
+                            <div className="text-sm text-gray-500">
+                              {device.quantity} devices × {formatCurrency(unitPrice / (device.quantity || 1))}
+                            </div>
+                          </div>
+                          <span className="font-medium">{formatCurrency(unitPrice)}</span>
+                        </div>
+                      )
+                    })}
+                  <div className="flex justify-between items-center py-2 bg-gray-50 px-3 rounded">
+                    <span className="font-semibold text-gray-900">Support Labor Total:</span>
+                    <span className="font-semibold text-gray-900">{formatCurrency(quote.supportDevices.filter((device: any) => device.isActive && device.quantity > 0).reduce((sum: number, device: any) => sum + (device.monthlyPrice || 0), 0))}</span>
                   </div>
                 </div>
               </div>
@@ -219,13 +248,27 @@ export function QuoteView({ quote }: QuoteViewProps) {
               </div>
             )}
 
-            {/* Financial Totals */}
+            {/* Financial Summary */}
             <div className="border-t border-gray-200 pt-4">
               <div className="space-y-3">
                 <div className="flex justify-between items-center py-2">
-                  <span className="text-gray-600">Upfront Payment:</span>
-                  <span className="text-lg font-semibold">{formatCurrency(quote.upfrontPayment)}</span>
+                  <span className="text-gray-600">Monthly Recurring:</span>
+                  <span className="text-lg font-semibold">{formatCurrency(quote.monthlyTotal)}</span>
                 </div>
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-gray-600">Contract Length:</span>
+                  <span className="text-lg font-semibold">{quote.contractMonths} months</span>
+                </div>
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-gray-600">Total:</span>
+                  <span className="text-lg font-semibold">{formatCurrency(quote.monthlyTotal * quote.contractMonths)}</span>
+                </div>
+                {quote.upfrontPayment > 0 && (
+                  <div className="flex justify-between items-center py-2">
+                    <span className="text-gray-600">Upfront Payment:</span>
+                    <span className="text-lg font-semibold">{formatCurrency(quote.upfrontPayment)}</span>
+                  </div>
+                )}
                 {quote.discountType && quote.discountType !== 'none' && (
                   <div className="flex justify-between items-center py-2 text-red-600">
                     <span>Discount ({quote.discountType}):</span>
@@ -234,10 +277,6 @@ export function QuoteView({ quote }: QuoteViewProps) {
                     </span>
                   </div>
                 )}
-                <div className="flex justify-between items-center py-3 bg-blue-50 px-4 rounded-lg">
-                  <span className="text-lg font-semibold text-gray-900">Contract Total:</span>
-                  <span className="text-2xl font-bold text-gray-900">{formatCurrency(quote.contractTotal)}</span>
-                </div>
               </div>
             </div>
           </div>

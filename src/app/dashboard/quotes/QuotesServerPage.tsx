@@ -7,6 +7,7 @@ import { QuotesTable } from './QuotesTable'
 import { QuotesSearch } from './QuotesSearch'
 import { QuotesPagination } from './QuotesPagination'
 import Link from 'next/link'
+import { authOptions } from '@/lib/auth.config'
 
 const prisma = new PrismaClient()
 
@@ -19,7 +20,7 @@ interface QuotesServerPageProps {
 }
 
 async function getQuotesData(searchParams: QuotesServerPageProps['searchParams']) {
-  const session = await getServerSession()
+  const session = await getServerSession(authOptions)
   if (!session?.user) {
     redirect('/login')
   }
@@ -90,7 +91,11 @@ async function getQuotesData(searchParams: QuotesServerPageProps['searchParams']
   return {
     quotes: quotes.map(quote => ({
       ...quote,
-      quoteNumber: quote.quoteNumber || undefined // Convert null to undefined
+      quoteNumber: quote.quoteNumber || undefined, // Convert null to undefined
+      user: quote.user ? {
+        name: quote.user.name,
+        email: quote.user.email || 'N/A' // Convert null to fallback string
+      } : undefined
     })),
     total,
     page,
@@ -136,11 +141,11 @@ export default async function QuotesServerPage({ searchParams }: QuotesServerPag
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Customer
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Total Value
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">               
+                      Monthly Total
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Monthly Total
+                      Total Value
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Created

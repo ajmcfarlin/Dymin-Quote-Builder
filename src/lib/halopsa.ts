@@ -672,9 +672,9 @@ class HaloPSAClient {
       const analysis = {
         teams: [] as any[],
         global_averages: {
-          level_1: { agents: [], average_cost: 0 },
-          level_2: { agents: [], average_cost: 0 },
-          level_3: { agents: [], average_cost: 0 }
+          level_1: { agents: [] as any[], average_cost: 0 },
+          level_2: { agents: [] as any[], average_cost: 0 },
+          level_3: { agents: [] as any[], average_cost: 0 }
         },
         total_agents: 0,
         teams_processed: 0
@@ -691,9 +691,9 @@ class HaloPSAClient {
           ticket_count: team.ticket_count || 0,
           agents: [] as any[],
           level_costs: {
-            level_1: { agents: [], average_cost: 0, count: 0 },
-            level_2: { agents: [], average_cost: 0, count: 0 },
-            level_3: { agents: [], average_cost: 0, count: 0 }
+            level_1: { agents: [] as any[], average_cost: 0, count: 0 },
+            level_2: { agents: [] as any[], average_cost: 0, count: 0 },
+            level_3: { agents: [] as any[], average_cost: 0, count: 0 }
           }
         }
 
@@ -809,9 +809,9 @@ class HaloPSAClient {
       const analysis = {
         teams: [] as any[],
         global_averages: {
-          level_1: { agents: [], average_cost: 0 },
-          level_2: { agents: [], average_cost: 0 },
-          level_3: { agents: [], average_cost: 0 }
+          level_1: { agents: [] as any[], average_cost: 0 },
+          level_2: { agents: [] as any[], average_cost: 0 },
+          level_3: { agents: [] as any[], average_cost: 0 }
         },
         total_agents: 0,
         teams_processed: 0
@@ -977,29 +977,39 @@ class HaloPSAClient {
           // Save cost analysis for this team
           if (teamData.level_costs) {
             try {
-              await prisma.teamCostAnalysis.upsert({
-                where: { teamId: team.id },
-                update: {
-                  level1Count: teamData.level_costs.level_1?.count || 0,
-                  level1AvgCost: teamData.level_costs.level_1?.average_cost || 0,
-                  level2Count: teamData.level_costs.level_2?.count || 0,
-                  level2AvgCost: teamData.level_costs.level_2?.average_cost || 0,
-                  level3Count: teamData.level_costs.level_3?.count || 0,
-                  level3AvgCost: teamData.level_costs.level_3?.average_cost || 0,
-                  totalAgents: teamData.agents?.length || 0,
-                  updatedAt: new Date()
-                },
-                create: {
-                  teamId: team.id,
-                  level1Count: teamData.level_costs.level_1?.count || 0,
-                  level1AvgCost: teamData.level_costs.level_1?.average_cost || 0,
-                  level2Count: teamData.level_costs.level_2?.count || 0,
-                  level2AvgCost: teamData.level_costs.level_2?.average_cost || 0,
-                  level3Count: teamData.level_costs.level_3?.count || 0,
-                  level3AvgCost: teamData.level_costs.level_3?.average_cost || 0,
-                  totalAgents: teamData.agents?.length || 0
-                }
+              // Find existing record or create new one
+              const existingAnalysis = await prisma.teamCostAnalysis.findFirst({
+                where: { teamId: team.id }
               })
+
+              if (existingAnalysis) {
+                await prisma.teamCostAnalysis.update({
+                  where: { id: existingAnalysis.id },
+                  data: {
+                    level1Count: teamData.level_costs.level_1?.count || 0,
+                    level1AvgCost: teamData.level_costs.level_1?.average_cost || 0,
+                    level2Count: teamData.level_costs.level_2?.count || 0,
+                    level2AvgCost: teamData.level_costs.level_2?.average_cost || 0,
+                    level3Count: teamData.level_costs.level_3?.count || 0,
+                    level3AvgCost: teamData.level_costs.level_3?.average_cost || 0,
+                    totalAgents: teamData.agents?.length || 0,
+                    updatedAt: new Date()
+                  }
+                })
+              } else {
+                await prisma.teamCostAnalysis.create({
+                  data: {
+                    teamId: team.id,
+                    level1Count: teamData.level_costs.level_1?.count || 0,
+                    level1AvgCost: teamData.level_costs.level_1?.average_cost || 0,
+                    level2Count: teamData.level_costs.level_2?.count || 0,
+                    level2AvgCost: teamData.level_costs.level_2?.average_cost || 0,
+                    level3Count: teamData.level_costs.level_3?.count || 0,
+                    level3AvgCost: teamData.level_costs.level_3?.average_cost || 0,
+                    totalAgents: teamData.agents?.length || 0
+                  }
+                })
+              }
               result.cost_analyses_saved++
             } catch (analysisError) {
               console.error(`Failed to save cost analysis for team ${teamData.id}:`, analysisError)
@@ -1357,8 +1367,8 @@ class HaloPSAClient {
       console.log('Ticket details after template creation:', ticketDetails)
       
       // Step 3: Analyze what fields got populated by the template
-      const templateFields = {}
-      const timeRelatedFields = {}
+      const templateFields: { [key: string]: any } = {}
+      const timeRelatedFields: { [key: string]: any } = {}
       
       Object.keys(ticketDetails).forEach(key => {
         const lowerKey = key.toLowerCase()

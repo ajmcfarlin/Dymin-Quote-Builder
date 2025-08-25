@@ -288,6 +288,8 @@ export function QuoteWizard({ readOnly = false, editMode = false, quoteId }: Quo
           supportDevices={state.supportDevices}
           upfrontPayment={state.upfrontPayment}
           onUpfrontPaymentChange={updateUpfrontPayment}
+          editMode={editMode}
+          quoteId={quoteId}
         />
       )}
       </div>

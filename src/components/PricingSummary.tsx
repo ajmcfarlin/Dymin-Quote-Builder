@@ -347,7 +347,7 @@ export function PricingSummary({ calculations, monthlyServices, supportDevices, 
                       2: { business: 185, afterhours: 275 },
                       3: { business: 275, afterhours: 375 }
                     }
-                    const rate = baseRates[service.skillLevel]?.[service.factor2]
+                    const rate = baseRates[service.skillLevel as 1 | 2 | 3]?.[service.factor2 as 'business' | 'afterhours']
                     
                     if (!rate || isNaN(hours)) {
                       return null

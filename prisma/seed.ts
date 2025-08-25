@@ -30,23 +30,10 @@ function generateSecurePassword(length: number = 12): string {
 
 async function seedDefaults() {
   console.log('🌱 Seeding default data...')
-
-  // Create default labor rates if they don't exist
-  const laborRates = [
-    { skillLevel: 1, costPerHour: 22, businessHoursPrice: 155, afterHoursPrice: 155 },
-    { skillLevel: 2, costPerHour: 37, businessHoursPrice: 185, afterHoursPrice: 275 },
-    { skillLevel: 3, costPerHour: 46, businessHoursPrice: 275, afterHoursPrice: 375 }
-  ]
-
-  for (const rate of laborRates) {
-    await prisma.laborRate.upsert({
-      where: { skillLevel: rate.skillLevel },
-      update: rate,
-      create: rate,
-    })
-  }
-
-  console.log('💰 Created labor rates for skill levels 1-3')
+  
+  // Labor rates are configured in the application code
+  // No database seeding needed for labor rates
+  console.log('💰 Labor rates are configured in application code')
 }
 
 async function createUser(username: string, name?: string, role: string = 'sales') {

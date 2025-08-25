@@ -1,13 +1,14 @@
 import QuotesServerPage from './QuotesServerPage'
 
 interface QuotesPageProps {
-  searchParams: {
+  searchParams: Promise<{
     page?: string
     search?: string
     limit?: string
-  }
+  }>
 }
 
-export default function QuotesPage({ searchParams }: QuotesPageProps) {
-  return <QuotesServerPage searchParams={searchParams} />
+export default async function QuotesPage({ searchParams }: QuotesPageProps) {
+  const resolvedSearchParams = await searchParams
+  return <QuotesServerPage searchParams={resolvedSearchParams} />
 }

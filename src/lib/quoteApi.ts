@@ -108,6 +108,43 @@ export class QuoteAPI {
   }
 }
 
+// Helper function to calculate support device costs
+function calculateSupportDeviceCosts(device: any) {
+  const costRates: { [key: number]: number } = { 1: 22, 2: 37, 3: 46 }
+  const priceRates: { [key: number]: { business: number; afterHours: number } } = { 
+    1: { business: 155, afterHours: 155 },
+    2: { business: 185, afterHours: 275 },
+    3: { business: 275, afterHours: 375 }
+  }
+  
+  const skillLevel = device.skillLevel as 1 | 2 | 3
+  
+  const calculateServiceTypeCost = (hours: any) => {
+    const cost = device.quantity * (
+      (hours.onsiteBusiness + hours.remoteBusiness + hours.onsiteAfterHours + hours.remoteAfterHours) * costRates[skillLevel]
+    )
+    
+    const businessHoursPrice = device.quantity * (
+      (hours.onsiteBusiness + hours.remoteBusiness) * priceRates[skillLevel].business
+    )
+    const afterHoursPrice = device.quantity * (
+      (hours.onsiteAfterHours + hours.remoteAfterHours) * priceRates[skillLevel].afterHours
+    )
+    const price = businessHoursPrice + afterHoursPrice
+    
+    return { cost, price }
+  }
+
+  const predictable = calculateServiceTypeCost(device.hours.predictable)
+  const reactive = calculateServiceTypeCost(device.hours.reactive)
+  const emergency = calculateServiceTypeCost(device.hours.emergency)
+  
+  const totalCost = predictable.cost + reactive.cost + emergency.cost
+  const totalPrice = predictable.price + reactive.price + emergency.price
+
+  return { cost: totalCost, price: totalPrice }
+}
+
 // Helper function to convert QuoteContext state to CreateQuoteRequest
 export function stateToCreateQuoteRequest(state: {
   customer: any
@@ -120,13 +157,23 @@ export function stateToCreateQuoteRequest(state: {
 }): CreateQuoteRequest {
   const totals = state.calculations?.totals
   
+  // Calculate and add monthly prices to support devices
+  const enrichedSupportDevices = state.supportDevices.map(device => {
+    if (!device.isActive || device.quantity === 0) {
+      return { ...device, monthlyPrice: 0 }
+    }
+    
+    const costs = calculateSupportDeviceCosts(device)
+    return { ...device, monthlyPrice: costs.price }
+  })
+  
   return {
     customerName: state.customer.companyName,
     customerEmail: state.customer.email,
     customerData: state.customer,
     setupServices: state.setupServices,
     monthlyServices: state.monthlyServices,
-    supportDevices: state.supportDevices,
+    supportDevices: enrichedSupportDevices,
     otherLaborData: state.otherLaborData,
     monthlyTotal: totals?.monthlyTotal || 0,
     setupCosts: totals?.setupCosts || 0,

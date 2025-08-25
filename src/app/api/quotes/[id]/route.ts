@@ -2,16 +2,18 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { PrismaClient } from '@/generated/prisma'
 import { UpdateQuoteRequest } from '@/types/savedQuote'
+import { authOptions } from '@/lib/auth.config'
 
 const prisma = new PrismaClient()
 
 // GET /api/quotes/[id] - Get a specific quote
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession()
+    const resolvedParams = await params
+    const session = await getServerSession(authOptions)
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -40,7 +42,7 @@ export async function GET(
 
     const quote = await prisma.quote.findFirst({
       where: {
-        id: params.id,
+        id: resolvedParams.id,
         userId: user.id
       }
     })
@@ -59,10 +61,11 @@ export async function GET(
 // PUT /api/quotes/[id] - Update a specific quote
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession()
+    const resolvedParams = await params
+    const session = await getServerSession(authOptions)
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -92,7 +95,7 @@ export async function PUT(
     // Check if quote exists and belongs to user
     const existingQuote = await prisma.quote.findFirst({
       where: {
-        id: params.id,
+        id: resolvedParams.id,
         userId: user.id
       }
     })
@@ -150,7 +153,7 @@ export async function PUT(
     }
 
     const updatedQuote = await prisma.quote.update({
-      where: { id: params.id },
+      where: { id: resolvedParams.id },
       data: updateData
     })
 
@@ -164,10 +167,11 @@ export async function PUT(
 // DELETE /api/quotes/[id] - Delete a specific quote
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession()
+    const resolvedParams = await params
+    const session = await getServerSession(authOptions)
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -197,7 +201,7 @@ export async function DELETE(
     // Check if quote exists and belongs to user
     const existingQuote = await prisma.quote.findFirst({
       where: {
-        id: params.id,
+        id: resolvedParams.id,
         userId: user.id
       }
     })
@@ -208,7 +212,7 @@ export async function DELETE(
 
 
     await prisma.quote.delete({
-      where: { id: params.id }
+      where: { id: resolvedParams.id }
     })
 
     return NextResponse.json({ message: 'Quote deleted successfully' })

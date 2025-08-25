@@ -6,6 +6,7 @@ import { QuoteWizard } from '@/components/QuoteWizard'
 import { QuoteProvider } from '@/contexts/QuoteContext'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
+import { authOptions } from '@/lib/auth.config'
 
 const prisma = new PrismaClient()
 
@@ -14,7 +15,7 @@ interface EditQuoteServerProps {
 }
 
 async function getQuoteData(quoteId: string) {
-  const session = await getServerSession()
+  const session = await getServerSession(authOptions)
   if (!session?.user) {
     redirect('/login')
   }
