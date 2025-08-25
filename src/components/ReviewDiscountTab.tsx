@@ -2,20 +2,26 @@
 
 import React, { useState } from 'react'
 import { CustomerInfo, QuoteCalculation } from '@/types/quote'
+import { QuoteAPI, stateToCreateQuoteRequest } from '@/lib/quoteApi'
+import { useRouter } from 'next/navigation'
 
 interface ReviewDiscountTabProps {
   calculations?: QuoteCalculation
   customer: CustomerInfo
   supportDevices?: any[]
   upfrontPayment: number
-  onUpfrontPaymentChange: (amount: number) => void
+  onUpfrontPaymentChange: (payment: number) => void
+  editMode?: boolean
+  quoteId?: string
 }
 
 type DiscountType = 'none' | 'percentage' | 'raw_dollar' | 'margin_override' | 'per_user' | 'override'
 
-export function ReviewDiscountTab({ calculations, customer, supportDevices, upfrontPayment, onUpfrontPaymentChange }: ReviewDiscountTabProps) {
+export function ReviewDiscountTab({ calculations, customer, supportDevices, upfrontPayment, onUpfrontPaymentChange, editMode = false, quoteId }: ReviewDiscountTabProps) {
   const [discountType, setDiscountType] = useState<DiscountType>('none')
   const [discountValue, setDiscountValue] = useState<number>(0)
+  const [isGenerating, setIsGenerating] = useState(false)
+  const router = useRouter()
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -26,24 +32,6 @@ export function ReviewDiscountTab({ calculations, customer, supportDevices, upfr
 
   const formatPercent = (percent: number) => {
     return `${percent.toFixed(1)}%`
-  }
-
-  // Calculate actual margins based on data
-  const calculateMargins = () => {
-    if (!calculations?.totals) return { tools: 0, labor: 0, services: 0, overall: 0 }
-    
-    // Rough margin calculations - you can adjust these based on actual cost data
-    const toolsMargin = 50.0 // Typical tools margin
-    const laborMargin = 75.0 // Typical labor margin (price vs cost)
-    const servicesMargin = (toolsMargin + laborMargin) / 2 // Average
-    const overallMargin = servicesMargin
-    
-    return {
-      tools: toolsMargin,
-      labor: laborMargin, 
-      services: servicesMargin,
-      overall: overallMargin
-    }
   }
 
   // Calculate discounted total
@@ -106,27 +94,133 @@ export function ReviewDiscountTab({ calculations, customer, supportDevices, upfr
   }
 
   const totals = calculations?.totals
-  const margins = calculateMargins()
   const laborHours = calculateLaborHours()
   const originalTotal = totals?.monthlyTotal || 0
   const discountedTotal = calculateDiscountedTotal(originalTotal)
   const totalUsers = (customer.users.full || 0) + (customer.users.emailOnly || 0)
+  
+  // Calculate proportional discounts for each component
+  const hasDiscount = discountType !== 'none' && discountValue > 0
+  const totalDiscountAmount = hasDiscount ? originalTotal - discountedTotal : 0
+  
+  const calculateDiscountedComponent = (componentPrice: number) => {
+    if (!hasDiscount || originalTotal === 0) return componentPrice
+    const weighting = componentPrice / originalTotal
+    const componentDiscount = totalDiscountAmount * weighting
+    return componentPrice - componentDiscount
+  }
+  
+  const discountedTools = calculateDiscountedComponent(totals?.toolsSoftware || 0)
+  const discountedSupportLabor = calculateDiscountedComponent(totals?.supportLabor || 0)
+  const discountedOtherLabor = calculateDiscountedComponent(totals?.otherLabor || 0)
+  const discountedSetup = calculateDiscountedComponent(totals?.deferredSetupMonthly || 0)
+
+  // Calculate actual margins based on cost vs price data
+  const calculateMargins = () => {
+    if (!calculations?.totals) return { tools: 0, labor: 0, services: 0, overall: 0 }
+    
+    // Use discounted prices if discount is active, otherwise use original prices
+    const toolsPrice = hasDiscount ? discountedTools : (totals?.toolsSoftware || 0)
+    const supportLaborPrice = hasDiscount ? discountedSupportLabor : (totals?.supportLabor || 0)
+    const otherLaborPrice = hasDiscount ? discountedOtherLabor : (totals?.otherLabor || 0)
+    
+    // Calculate costs (these never change)
+    const toolsCost = (totals?.toolsSoftware || 0) * 0.5
+    const supportLaborCost = (totals?.supportLabor || 0) * 0.25
+    const otherLaborCost = (totals?.otherLabor || 0) * 0.25
+    
+    // Calculate margins: (Price - Cost) / Price * 100
+    const toolsMargin = toolsPrice > 0 ? ((toolsPrice - toolsCost) / toolsPrice) * 100 : 0
+    
+    // Combined labor margin
+    const totalLaborPrice = supportLaborPrice + otherLaborPrice
+    const totalLaborCost = supportLaborCost + otherLaborCost
+    const laborMargin = totalLaborPrice > 0 ? ((totalLaborPrice - totalLaborCost) / totalLaborPrice) * 100 : 0
+    
+    // Overall services margin
+    const totalServicesPrice = toolsPrice + supportLaborPrice + otherLaborPrice
+    const totalServicesCost = toolsCost + supportLaborCost + otherLaborCost
+    const servicesMargin = totalServicesPrice > 0 ? ((totalServicesPrice - totalServicesCost) / totalServicesPrice) * 100 : 0
+    
+    return {
+      tools: toolsMargin,
+      labor: laborMargin, 
+      services: servicesMargin,
+      overall: servicesMargin
+    }
+  }
+
+  const margins = calculateMargins()
+
+  // Generate/Update quote function
+  const handleGenerateQuote = async () => {
+    if (!customer?.companyName?.trim()) {
+      alert('Please enter a company name before ' + (editMode ? 'updating' : 'generating') + ' the quote.')
+      return
+    }
+
+    setIsGenerating(true)
+    
+    try {
+      // Build quote state object similar to QuoteContext
+      const quoteState = {
+        customer,
+        setupServices: calculations?.setupServices || [],
+        monthlyServices: { variableCostTools: [] }, // This should be populated from actual data
+        supportDevices: supportDevices || [],
+        otherLaborData: {},
+        upfrontPayment,
+        calculations
+      }
+
+      if (editMode && quoteId) {
+        // Update existing quote
+        const updateRequest = {
+          id: quoteId,
+          ...stateToCreateQuoteRequest(quoteState),
+          discountType,
+          discountValue,
+          discountedTotal: discountType !== 'none' && discountValue > 0 ? discountedTotal : undefined
+        }
+        const updatedQuote = await QuoteAPI.updateQuote(updateRequest)
+        
+        alert('✅ Quote updated successfully!')
+        router.push(`/dashboard/quotes/${updatedQuote.id}`)
+      } else {
+        // Create new quote
+        const request = {
+          ...stateToCreateQuoteRequest(quoteState),
+          discountType,
+          discountValue,
+          discountedTotal: discountType !== 'none' && discountValue > 0 ? discountedTotal : undefined
+        }
+        const savedQuote = await QuoteAPI.createQuote(request)
+        
+        alert('✅ Quote generated successfully!')
+        router.push(`/dashboard/quotes/${savedQuote.id}`)
+      }
+    } catch (error) {
+      console.error('Error saving quote:', error)
+      alert('❌ Failed to ' + (editMode ? 'update' : 'generate') + ' quote. Please try again.')
+    } finally {
+      setIsGenerating(false)
+    }
+  }
 
   return (
-    <div className="rounded-lg shadow-sm border border-gray-600 p-6" style={{ backgroundColor: '#343333' }}>
-      <h2 className="text-xl font-semibold text-white mb-6">Review & Finalize Quote</h2>
+    <div className="space-y-8">
       
-      {/* Discount Controls - Full Width at Top */}
-      <div className="mb-8 bg-gray-700 p-6 rounded-lg">
-        <h3 className="text-lg font-semibold text-white mb-4">Apply Discount</h3>
+      {/* Discount Controls */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Discounting Calculations</h3>
         
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Discount Type</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Discount Type</label>
             <select 
               value={discountType}
               onChange={(e) => setDiscountType(e.target.value as DiscountType)}
-              className="w-full px-3 py-2 border border-gray-600 rounded-lg text-sm bg-gray-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="none">No Discount</option>
               <option value="percentage">Percentage Discount</option>
@@ -139,7 +233,7 @@ export function ReviewDiscountTab({ calculations, customer, supportDevices, upfr
 
           {discountType !== 'none' && (
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 {discountType === 'percentage' && 'Discount Percentage'}
                 {discountType === 'raw_dollar' && 'Discount Amount ($)'}
                 {discountType === 'margin_override' && 'Target Margin (%)'}
@@ -153,7 +247,7 @@ export function ReviewDiscountTab({ calculations, customer, supportDevices, upfr
                 max={(['percentage', 'margin_override'].includes(discountType)) ? '100' : undefined}
                 value={discountValue}
                 onChange={(e) => setDiscountValue(parseFloat(e.target.value) || 0)}
-                className="w-full px-3 py-2 border border-gray-600 rounded-lg text-sm bg-gray-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder={
                   discountType === 'percentage' ? '10.0' :
                   discountType === 'raw_dollar' ? '500.00' :
@@ -166,256 +260,375 @@ export function ReviewDiscountTab({ calculations, customer, supportDevices, upfr
           )}
         </div>
 
-        {/* Final Pricing Summary */}
-        <div className="mt-6 pt-4 border-t border-gray-600">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 text-center">
-            {discountType !== 'none' && discountValue > 0 && (
-              <div>
-                <div className="text-gray-400 text-sm">Original Monthly</div>
-                <div className="text-gray-400 line-through text-lg">{formatCurrency(originalTotal)}</div>
-              </div>
-            )}
+        {/* Discount Summary */}
+        {discountType !== 'none' && discountValue > 0 && (
+          <div className="mt-6 grid grid-cols-2 gap-6 text-right">
             <div>
-              <div className="text-white text-sm font-medium">Monthly Total</div>
-              <div className="text-2xl font-bold" style={{ color: '#15bef0' }}>
-                {formatCurrency(discountType !== 'none' && discountValue > 0 ? discountedTotal : originalTotal)}
+              <div className="text-sm text-gray-700">Raw Dollar Discount</div>
+              <div className="text-lg font-semibold text-gray-900">
+                {(() => {
+                  const discountAmount = originalTotal - discountedTotal;
+                  const sign = discountAmount >= 0 ? '-' : '+';
+                  const amount = Math.abs(discountAmount);
+                  return `${sign}${formatCurrency(amount)}`;
+                })()}
               </div>
             </div>
             <div>
-              <div className="text-gray-300 text-sm">Total Contract</div>
-              <div className="text-white text-lg font-semibold">
-                {formatCurrency((discountType !== 'none' && discountValue > 0 ? discountedTotal : originalTotal) * customer.contractMonths + upfrontPayment)}
+              <div className="text-sm text-gray-700">Discounted Amount</div>
+              <div className="text-lg font-semibold" style={{ color: '#15bef0' }}>
+                {formatCurrency(discountedTotal)}
               </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
 
-      {/* Main Layout - 2 Columns */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      {/* Pricing Summary */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+        <div className="p-6 border-b border-gray-200">
+          <h3 className="text-lg font-semibold text-gray-900">Pricing Summary</h3>
+        </div>
         
-        {/* Left Column - Quote Summary */}
-        <div>
-          <h3 className="text-lg font-semibold text-white mb-4 border-b border-gray-600 pb-2">Quote Breakdown</h3>
-          
-          {/* Pricing Breakdown */}
-          <div className="space-y-3 text-sm mb-6">
-            <div className="flex justify-between">
-              <span className="text-gray-300">Tools & Licensing</span>
-              <span className="text-white">{formatCurrency(totals?.toolsSoftware || 0)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-300">Support Labor</span>
-              <span className="text-white">{formatCurrency(totals?.supportLabor || 0)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-300">Other Labor</span>
-              <span className="text-white">{formatCurrency(totals?.otherLabor || 0)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-300">Setup Services (Monthly)</span>
-              <span className="text-white">{formatCurrency(totals?.deferredSetupMonthly || 0)}</span>
-            </div>
-            <div className="flex justify-between border-t border-gray-600 pt-2 font-semibold">
-              <span className="text-white">Monthly Total</span>
-              <span style={{ color: '#15bef0' }}>{formatCurrency(originalTotal)}</span>
-            </div>
-          </div>
-
-          {/* Contract Information */}
-          <div className="space-y-3 text-sm mb-6">
-            <h4 className="font-medium text-white border-b border-gray-600 pb-2">Contract Details</h4>
-            <div className="flex justify-between">
-              <span className="text-gray-300">Contract Type</span>
-              <span className="text-white">{customer.contractType}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-300">Contract Length</span>
-              <span className="text-white">{customer.contractMonths} months</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-300">Total Users</span>
-              <span className="text-white">{totalUsers}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-300">Monthly per User</span>
-              <span className="text-white">{formatCurrency(originalTotal / Math.max(1, totalUsers))}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-300">Full Users</span>
-              <span className="text-white">{customer.users.full || 0}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-300">Email Only Users</span>
-              <span className="text-white">{customer.users.emailOnly || 0}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-300">Cost per Full User</span>
-              <span className="text-white">{formatCurrency(originalTotal / Math.max(1, customer.users.full || 1))}</span>
-            </div>
-          </div>
-
-          {/* Per-User Analysis */}
-          <div className="space-y-3 text-sm mb-6">
-            <h4 className="font-medium text-white border-b border-gray-600 pb-2">Per-User Analysis</h4>
-            <div className="flex justify-between">
-              <span className="text-gray-300">Revenue per User</span>
-              <span className="text-white">{formatCurrency(originalTotal / Math.max(1, totalUsers))}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-300">Annual per User</span>
-              <span className="text-white">{formatCurrency((originalTotal * 12) / Math.max(1, totalUsers))}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-300">Contract per User</span>
-              <span className="text-white">{formatCurrency((originalTotal * customer.contractMonths) / Math.max(1, totalUsers))}</span>
-            </div>
-            {laborHours.level1 + laborHours.level2 + laborHours.level3 > 0 && (
-              <div className="flex justify-between">
-                <span className="text-gray-300">Labor Hours per User</span>
-                <span className="text-white">{((laborHours.level1 + laborHours.level2 + laborHours.level3) / Math.max(1, totalUsers)).toFixed(1)}h</span>
+        <div className="p-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 divide-x divide-gray-200">
+            
+            {/* Left Column */}
+            <div className="space-y-6 pr-8">
+              {/* Pricing Breakdown */}
+              <div>
+                <h4 className="font-semibold text-gray-900 text-lg mb-4">Pricing Breakdown</h4>
+                <div className="space-y-3">
+                  <div className="flex justify-between py-2">
+                    <span className="text-gray-700">Tools</span>
+                    <div className="text-right">
+                      {hasDiscount ? (
+                        <div>
+                          <span className="font-medium text-gray-500 line-through">{formatCurrency(totals?.toolsSoftware || 0)}</span>
+                          <br />
+                          <span className="font-medium text-gray-900">{formatCurrency(discountedTools)}</span>
+                        </div>
+                      ) : (
+                        <span className="font-medium text-gray-900">{formatCurrency(totals?.toolsSoftware || 0)}</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex justify-between py-2">
+                    <span className="text-gray-700">Support Labor</span>
+                    <div className="text-right">
+                      {hasDiscount ? (
+                        <div>
+                          <span className="font-medium text-gray-500 line-through">{formatCurrency(totals?.supportLabor || 0)}</span>
+                          <br />
+                          <span className="font-medium text-gray-900">{formatCurrency(discountedSupportLabor)}</span>
+                        </div>
+                      ) : (
+                        <span className="font-medium text-gray-900">{formatCurrency(totals?.supportLabor || 0)}</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex justify-between py-2">
+                    <span className="text-gray-700">Other Labor</span>
+                    <div className="text-right">
+                      {hasDiscount ? (
+                        <div>
+                          <span className="font-medium text-gray-500 line-through">{formatCurrency(totals?.otherLabor || 0)}</span>
+                          <br />
+                          <span className="font-medium text-gray-900">{formatCurrency(discountedOtherLabor)}</span>
+                        </div>
+                      ) : (
+                        <span className="font-medium text-gray-900">{formatCurrency(totals?.otherLabor || 0)}</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex justify-between py-2">
+                    <span className="text-gray-700">Deferred Setup (Monthly)</span>
+                    <div className="text-right">
+                      {hasDiscount ? (
+                        <div>
+                          <span className="font-medium text-gray-500 line-through">{formatCurrency(totals?.deferredSetupMonthly || 0)}</span>
+                          <br />
+                          <span className="font-medium text-gray-900">{formatCurrency(discountedSetup)}</span>
+                        </div>
+                      ) : (
+                        <span className="font-medium text-gray-900">{formatCurrency(totals?.deferredSetupMonthly || 0)}</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex justify-between py-3 font-semibold text-lg border-t-2 border-gray-300">
+                    <span className="text-gray-900">Total Monthly Price</span>
+                    <div className="text-right">
+                      {hasDiscount ? (
+                        <div>
+                          <span className="font-semibold text-gray-500 line-through">{formatCurrency(originalTotal)}</span>
+                          <br />
+                          <span style={{ color: '#15bef0' }}>{formatCurrency(discountedTotal)}</span>
+                        </div>
+                      ) : (
+                        <span style={{ color: '#15bef0' }}>{formatCurrency(originalTotal)}</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
               </div>
-            )}
-          </div>
 
-          {/* Labor Hours Analysis */}
-          {(laborHours.level1 + laborHours.level2 + laborHours.level3) > 0 && (
-            <div className="space-y-3 text-sm mb-6">
-              <h4 className="font-medium text-white border-b border-gray-600 pb-2">Labor Hours Breakdown</h4>
-              {laborHours.level1 > 0 && (
-                <div className="flex justify-between">
-                  <span className="text-gray-300">Level 1 Hours</span>
-                  <span className="text-white">{laborHours.level1.toFixed(1)}h</span>
+              {/* Per-User Statistics */}
+              <div className="border-t pt-6">
+                <h4 className="font-semibold text-gray-900 text-lg mb-4">Monthly Per-User Statistics</h4>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between py-1">
+                    <span className="text-gray-700">Support Price per User</span>
+                    <div className="text-right">
+                      {hasDiscount ? (
+                        <div>
+                          <span className="font-medium text-gray-500 line-through text-xs">{formatCurrency((totals?.supportLabor || 0) / Math.max(1, totalUsers))}</span>
+                          <br />
+                          <span className="font-medium text-gray-900">{formatCurrency(discountedSupportLabor / Math.max(1, totalUsers))}</span>
+                        </div>
+                      ) : (
+                        <span className="font-medium text-gray-900">{formatCurrency((totals?.supportLabor || 0) / Math.max(1, totalUsers))}</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex justify-between py-1">
+                    <span className="text-gray-700">Deferred Monthly Setup Price per User</span>
+                    <div className="text-right">
+                      {hasDiscount ? (
+                        <div>
+                          <span className="font-medium text-gray-500 line-through text-xs">{formatCurrency((totals?.deferredSetupMonthly || 0) / Math.max(1, totalUsers))}</span>
+                          <br />
+                          <span className="font-medium text-gray-900">{formatCurrency(discountedSetup / Math.max(1, totalUsers))}</span>
+                        </div>
+                      ) : (
+                        <span className="font-medium text-gray-900">{formatCurrency((totals?.deferredSetupMonthly || 0) / Math.max(1, totalUsers))}</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex justify-between py-2 font-medium border-t pt-2">
+                    <span className="text-gray-900">Total Monthly Price per User</span>
+                    <div className="text-right">
+                      {hasDiscount ? (
+                        <div>
+                          <span className="font-medium text-gray-500 line-through text-xs">{formatCurrency(((totals?.supportLabor || 0) + (totals?.deferredSetupMonthly || 0)) / Math.max(1, totalUsers))}</span>
+                          <br />
+                          <span className="font-medium text-gray-900">{formatCurrency((discountedSupportLabor + discountedSetup) / Math.max(1, totalUsers))}</span>
+                        </div>
+                      ) : (
+                        <span className="text-gray-900">{formatCurrency(((totals?.supportLabor || 0) + (totals?.deferredSetupMonthly || 0)) / Math.max(1, totalUsers))}</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Cost vs Price Table */}
+              <div className="border-t pt-6">
+                <h4 className="font-semibold text-gray-900 text-lg mb-4">Monthly Services Costs</h4>
+                <div className="border rounded-lg overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900">Service</th>
+                        <th className="text-right py-3 px-4 font-semibold text-gray-900">Cost</th>
+                        <th className="text-right py-3 px-4 font-semibold text-gray-900">Price</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      <tr>
+                        <td className="py-3 px-4 text-gray-900 font-medium">Tools</td>
+                        <td className="text-right py-3 px-4 font-semibold text-gray-900">{formatCurrency((totals?.toolsSoftware || 0) * 0.5)}</td>
+                        <td className="text-right py-3 px-4 font-semibold text-gray-900">
+                          {hasDiscount ? (
+                            <div>
+                              <span className="text-gray-500 line-through text-xs">{formatCurrency(totals?.toolsSoftware || 0)}</span>
+                              <br />
+                              <span>{formatCurrency(discountedTools)}</span>
+                            </div>
+                          ) : (
+                            formatCurrency(totals?.toolsSoftware || 0)
+                          )}
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="py-3 px-4 text-gray-900 font-medium">Support Labor</td>
+                        <td className="text-right py-3 px-4 font-semibold text-gray-900">{formatCurrency((totals?.supportLabor || 0) * 0.25)}</td>
+                        <td className="text-right py-3 px-4 font-semibold text-gray-900">
+                          {hasDiscount ? (
+                            <div>
+                              <span className="text-gray-500 line-through text-xs">{formatCurrency(totals?.supportLabor || 0)}</span>
+                              <br />
+                              <span>{formatCurrency(discountedSupportLabor)}</span>
+                            </div>
+                          ) : (
+                            formatCurrency(totals?.supportLabor || 0)
+                          )}
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="py-3 px-4 text-gray-900 font-medium">Other Labor</td>
+                        <td className="text-right py-3 px-4 font-semibold text-gray-900">{formatCurrency((totals?.otherLabor || 0) * 0.25)}</td>
+                        <td className="text-right py-3 px-4 font-semibold text-gray-900">
+                          {hasDiscount ? (
+                            <div>
+                              <span className="text-gray-500 line-through text-xs">{formatCurrency(totals?.otherLabor || 0)}</span>
+                              <br />
+                              <span>{formatCurrency(discountedOtherLabor)}</span>
+                            </div>
+                          ) : (
+                            formatCurrency(totals?.otherLabor || 0)
+                          )}
+                        </td>
+                      </tr>
+                      <tr className="bg-gray-50 font-bold">
+                        <td className="py-3 px-4 text-gray-900">Total Services</td>
+                        <td className="text-right py-3 px-4 text-gray-900">{formatCurrency((totals?.toolsSoftware || 0) * 0.5 + (totals?.supportLabor || 0) * 0.25 + (totals?.otherLabor || 0) * 0.25)}</td>
+                        <td className="text-right py-3 px-4 text-gray-900">
+                          {hasDiscount ? (
+                            <div>
+                              <span className="text-gray-500 line-through text-xs">{formatCurrency((totals?.toolsSoftware || 0) + (totals?.supportLabor || 0) + (totals?.otherLabor || 0))}</span>
+                              <br />
+                              <span>{formatCurrency(discountedTools + discountedSupportLabor + discountedOtherLabor)}</span>
+                            </div>
+                          ) : (
+                            formatCurrency((totals?.toolsSoftware || 0) + (totals?.supportLabor || 0) + (totals?.otherLabor || 0))
+                          )}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            {/* Right Column */}
+            <div className="space-y-6 pl-8">
+              {/* Profitability */}
+              <div>
+                <h4 className="font-semibold text-gray-900 text-lg mb-4">Profitability</h4>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between py-1">
+                    <span className="text-gray-700">Overall Margin on Tools</span>
+                    <span className="font-medium text-gray-900">{formatPercent(margins.tools)}</span>
+                  </div>
+                  <div className="flex justify-between py-1">
+                    <span className="text-gray-700">Overall Margin on Labor</span>
+                    <span className="font-medium text-gray-900">{formatPercent(margins.labor)}</span>
+                  </div>
+                  <div className="flex justify-between py-1">
+                    <span className="text-gray-700">Overall Services Margin</span>
+                    <span className="font-medium text-gray-900">{formatPercent(margins.services)}</span>
+                  </div>
+                  <div className="flex justify-between py-2 font-semibold border-t pt-2">
+                    <span className="text-gray-900">Overall Contract Margin</span>
+                    <span className="text-gray-900">{formatPercent(margins.overall)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Hardware Metrics */}
+              {(laborHours.level1 + laborHours.level2 + laborHours.level3) > 0 && (
+                <div className="border-t pt-6">
+                  <h4 className="font-semibold text-gray-900 text-lg mb-4">Hardware Metrics</h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between py-1">
+                      <span className="text-gray-700">Total Monthly Support Labor</span>
+                      <span className="font-medium text-gray-900">{(laborHours.level1 + laborHours.level2 + laborHours.level3).toFixed(1)} hours</span>
+                    </div>
+                    <div className="flex justify-between py-1">
+                      <span className="text-gray-700">Total Monthly Project Labor</span>
+                      <span className="font-medium text-gray-900">0.0 hours</span>
+                    </div>
+                    <div className="flex justify-between py-1">
+                      <span className="text-gray-700">Emergency Budgeted Amount</span>
+                      <span className="font-medium text-gray-900">{formatCurrency(0)}</span>
+                    </div>
+                    
+                    <div className="border-t pt-3 mt-3">
+                      {laborHours.level1 > 0 && (
+                        <div className="flex justify-between py-1">
+                          <span className="text-gray-600">Level 1 Junior - Total Hours</span>
+                          <span className="font-medium text-gray-900">{laborHours.level1.toFixed(2)} hours/month</span>
+                        </div>
+                      )}
+                      {laborHours.level2 > 0 && (
+                        <div className="flex justify-between py-1">
+                          <span className="text-gray-600">Level 2 Int - Total Hours</span>
+                          <span className="font-medium text-gray-900">{laborHours.level2.toFixed(2)} hours/month</span>
+                        </div>
+                      )}
+                      {laborHours.level3 > 0 && (
+                        <div className="flex justify-between py-1">
+                          <span className="text-gray-600">Level 3 Sr - Total Hours</span>
+                          <span className="font-medium text-gray-900">{laborHours.level3.toFixed(2)} hours/month</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               )}
-              {laborHours.level2 > 0 && (
-                <div className="flex justify-between">
-                  <span className="text-gray-300">Level 2 Hours</span>
-                  <span className="text-white">{laborHours.level2.toFixed(1)}h</span>
+
+              {/* Contract Summary */}
+              <div className="border-t pt-6">
+                <h4 className="font-semibold text-gray-900 text-lg mb-4">Contract Summary</h4>
+                <div className="space-y-3">
+                  <div className="flex justify-between py-2">
+                    <span className="text-gray-700 font-medium">Monthly Total</span>
+                    <div className="text-right">
+                      {hasDiscount ? (
+                        <div>
+                          <span className="text-xl font-bold text-gray-500 line-through">{formatCurrency(originalTotal)}</span>
+                          <br />
+                          <span className="text-xl font-bold text-gray-900">{formatCurrency(discountedTotal)}</span>
+                        </div>
+                      ) : (
+                        <span className="text-xl font-bold text-gray-900">{formatCurrency(originalTotal)}</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex justify-between py-2">
+                    <span className="text-gray-700 font-medium">Contract Length</span>
+                    <span className="text-xl font-bold text-gray-900">{customer.contractMonths} months</span>
+                  </div>
+                  <div className="flex justify-between py-3 font-bold text-xl border-t-2 border-gray-300">
+                    <span className="text-gray-900">Total Contract Value</span>
+                    <div className="text-right">
+                      {hasDiscount ? (
+                        <div>
+                          <span className="text-xl font-bold text-gray-500 line-through">{formatCurrency(originalTotal * customer.contractMonths)}</span>
+                          <br />
+                          <span style={{ color: '#15bef0' }}>{formatCurrency(discountedTotal * customer.contractMonths)}</span>
+                        </div>
+                      ) : (
+                        <span style={{ color: '#15bef0' }}>{formatCurrency(originalTotal * customer.contractMonths)}</span>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* Generate Quote Button */}
+                  <div className="pt-4">
+                    <button 
+                      onClick={handleGenerateQuote}
+                      disabled={isGenerating}
+                      className={`w-full px-4 py-3 text-white rounded-lg font-medium transition-all duration-200 ${
+                        isGenerating 
+                          ? 'opacity-50 cursor-not-allowed' 
+                          : 'hover:opacity-90 cursor-pointer'
+                      }`}
+                      style={{ backgroundColor: '#15bef0' }}
+                    >
+                      {isGenerating 
+                        ? (editMode ? 'Updating Quote...' : 'Generating Quote...') 
+                        : (editMode ? 'Update Quote' : 'Generate Quote')
+                      }
+                    </button>
+                  </div>
                 </div>
-              )}
-              {laborHours.level3 > 0 && (
-                <div className="flex justify-between">
-                  <span className="text-gray-300">Level 3 Hours</span>
-                  <span className="text-white">{laborHours.level3.toFixed(1)}h</span>
-                </div>
-              )}
-              <div className="flex justify-between font-medium border-t border-gray-600 pt-2">
-                <span className="text-white">Total Labor Hours</span>
-                <span className="text-white">{(laborHours.level1 + laborHours.level2 + laborHours.level3).toFixed(1)}h</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-gray-300">Avg Cost per Hour</span>
-                <span className="text-white">{formatCurrency(((totals?.supportLabor || 0) * 0.25) / Math.max(1, laborHours.level1 + laborHours.level2 + laborHours.level3))}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-300">Avg Price per Hour</span>
-                <span className="text-white">{formatCurrency((totals?.supportLabor || 0) / Math.max(1, laborHours.level1 + laborHours.level2 + laborHours.level3))}</span>
-              </div>
-            </div>
-          )}
-
-          {/* Setup Services */}
-          {(totals?.setupCosts || 0) > 0 && (
-            <div className="space-y-3 text-sm">
-              <h4 className="font-medium text-white border-b border-gray-600 pb-2">Setup Services</h4>
-              <div className="flex justify-between">
-                <span className="text-gray-300">Total Setup Costs</span>
-                <span className="text-white">{formatCurrency(totals?.setupCosts || 0)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-300">Added to Monthly</span>
-                <span className="text-white">{formatCurrency(totals?.deferredSetupMonthly || 0)}</span>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Right Column - Financial Analysis */}
-        <div>
-          <h3 className="text-lg font-semibold text-white mb-4 border-b border-gray-600 pb-2">Financial Analysis</h3>
-          
-          {/* Profit Margin Analysis */}
-          <div className="space-y-3 text-sm mb-6">
-            <h4 className="font-medium text-white border-b border-gray-600 pb-2">Profit Analysis</h4>
-            <div className="flex justify-between">
-              <span className="text-gray-300">Tools Margin</span>
-              <span className="text-white">{formatPercent(margins.tools)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-300">Labor Margin</span>
-              <span className="text-white">{formatPercent(margins.labor)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-300">Overall Margin</span>
-              <span className="text-white">{formatPercent(margins.overall)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-300">Est. Monthly Cost</span>
-              <span className="text-white">{formatCurrency(originalTotal * 0.35)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-300">Est. Monthly Profit</span>
-              <span className="text-white">{formatCurrency(originalTotal * 0.65)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-300">Annual Profit</span>
-              <span className="text-white">{formatCurrency(originalTotal * 0.65 * 12)}</span>
-            </div>
-          </div>
-          
-
-          {/* Cost vs Price Breakdown */}
-          <div className="space-y-3 text-sm border-t border-gray-600 pt-4 mb-6">
-            <h4 className="font-medium text-white mb-3">Monthly Cost vs Price</h4>
-            <div className="flex justify-between">
-              <span className="text-gray-300">Tools Cost (est.)</span>
-              <span className="text-white">{formatCurrency((totals?.toolsSoftware || 0) * 0.5)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-300">Tools Price</span>
-              <span className="text-white">{formatCurrency(totals?.toolsSoftware || 0)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-300">Labor Cost (est.)</span>
-              <span className="text-white">{formatCurrency((totals?.supportLabor || 0) * 0.25)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-300">Labor Price</span>
-              <span className="text-white">{formatCurrency(totals?.supportLabor || 0)}</span>
-            </div>
-            <div className="flex justify-between border-t border-gray-600 pt-2">
-              <span className="text-gray-300">Total Est. Cost</span>
-              <span className="text-white">{formatCurrency(originalTotal * 0.35)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-300">Total Price</span>
-              <span className="text-white">{formatCurrency(originalTotal)}</span>
-            </div>
-            <div className="flex justify-between font-semibold">
-              <span className="text-white">Net Profit</span>
-              <span style={{ color: '#15bef0' }}>{formatCurrency(originalTotal * 0.65)}</span>
-            </div>
-          </div>
-
-          {/* Upfront Payment */}
-          <div className="mt-6">
-            <label className="block text-sm font-medium text-gray-300 mb-2">Upfront Payment</label>
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              value={upfrontPayment}
-              onChange={(e) => onUpfrontPaymentChange(parseFloat(e.target.value) || 0)}
-              className="w-full px-3 py-2 border border-gray-600 rounded-lg text-sm bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="0.00"
-            />
-            <div className="text-xs text-gray-400 mt-1">
-              Total setup costs: {formatCurrency(totals?.setupCosts || 0)}
             </div>
           </div>
         </div>
       </div>
+
     </div>
   )
 }

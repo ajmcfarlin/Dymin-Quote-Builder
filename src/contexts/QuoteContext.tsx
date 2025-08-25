@@ -303,17 +303,7 @@ export function QuoteProvider({ children, initialQuote }: QuoteProviderProps) {
     supportDevices: initialQuote.supportDevices,
     otherLaborData: initialQuote.otherLaborData,
     upfrontPayment: initialQuote.upfrontPayment,
-    calculations: {
-      totals: {
-        monthlyTotal: initialQuote.monthlyTotal,
-        setupCosts: initialQuote.setupCosts,
-        contractTotal: initialQuote.contractTotal,
-        upfrontPayment: initialQuote.upfrontPayment,
-        discountType: initialQuote.discountType,
-        discountValue: initialQuote.discountValue,
-        discountedTotal: initialQuote.discountedTotal
-      }
-    },
+    calculations: initialQuote.calculations || undefined,
     currentStep: 1,
     currentMonthlyTab: '',
     quoteSummaryExpanded: false

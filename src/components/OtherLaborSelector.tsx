@@ -62,27 +62,23 @@ export function OtherLaborSelector({ otherLaborData, onChange, supportLaborTotal
 
   return (
     <div className="space-y-6">
-      {/* Budget Display */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="text-center">
-            <div className="text-sm text-gray-600 mb-2">Budget</div>
-            <div className="text-4xl font-bold text-gray-900 mb-1">
-              {formatCurrency(remainingBudget)}
-            </div>
-            <div className="text-sm text-gray-500">
-              {formatCurrency(customItemsTotal)} used of {formatCurrency(budgetTotal)} total
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Other Labor Items */}
       <Card>
         <CardHeader>
           <CardTitle>Other Labor Items</CardTitle>
           <p className="text-sm text-gray-600">Add additional labor items as needed</p>
         </CardHeader>
+
+        <div className="pl-6 mb-6">
+          <div className="text-sm text-gray-600">Budget</div>
+          <div className="text-2xl font-bold text-gray-900 mb-1">
+            {formatCurrency(remainingBudget)}
+          </div>
+          <div className="text-sm text-gray-500">
+            {formatCurrency(customItemsTotal)} used of {formatCurrency(budgetTotal)} total
+          </div>
+        </div>
+        
         <CardContent>
           {otherLaborData.customItems.length > 0 && (
             <div className="space-y-3 mb-4">

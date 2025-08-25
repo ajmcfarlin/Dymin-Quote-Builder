@@ -5,6 +5,7 @@ import { DashboardLayout } from '@/components/DashboardLayout'
 import { QuoteView } from '@/components/QuoteView'
 import Link from 'next/link'
 import { Edit, ArrowLeft } from 'lucide-react'
+import { authOptions } from '@/lib/auth.config'
 
 const prisma = new PrismaClient()
 
@@ -13,7 +14,7 @@ interface QuoteViewServerProps {
 }
 
 async function getQuoteData(quoteId: string) {
-  const session = await getServerSession()
+  const session = await getServerSession(authOptions)
   if (!session?.user) {
     redirect('/login')
   }
@@ -101,8 +102,25 @@ export default async function QuoteViewServer({ quoteId }: QuoteViewServerProps)
           customerAddress: quote.customerAddress || undefined,
           customerRegion: quote.customerRegion || undefined,
           contractType: (quote.contractType as 'Managed Services' | 'Co-Managed Services') || undefined,
+          discountType: (quote.discountType as 'none' | 'percentage' | 'raw_dollar' | 'margin_override' | 'per_user' | 'override') || undefined,
+          discountValue: quote.discountValue || undefined,
+          discountedTotal: quote.discountedTotal || undefined,
+          estimatedCost: quote.estimatedCost || undefined,
+          profitMargin: quote.profitMargin || undefined,
+          haloPsaQuoteId: quote.haloPsaQuoteId || undefined,
           notes: quote.notes || undefined,
-          clientNotes: quote.clientNotes || undefined
+          clientNotes: quote.clientNotes || undefined,
+          // Fix user object type casting
+          user: quote.user ? {
+            name: quote.user.name,
+            email: quote.user.email || 'N/A'
+          } : undefined,
+          // Cast JSON fields to their expected types
+          customerData: quote.customerData as any,
+          setupServices: quote.setupServices as any,
+          monthlyServices: quote.monthlyServices as any,
+          supportDevices: quote.supportDevices as any,
+          otherLaborData: quote.otherLaborData as any
         }} />
       </div>
     </DashboardLayout>
