@@ -19,18 +19,29 @@ const eslintConfig = [
       "@typescript-eslint/no-unused-expressions": "off", 
       "@typescript-eslint/no-this-alias": "off",
       "@typescript-eslint/no-require-imports": "off",
+      "@typescript-eslint/no-empty-object-type": "off",
+      "@typescript-eslint/no-unnecessary-type-constraint": "off",
+      "@typescript-eslint/no-wrapper-object-types": "off",
+      "@typescript-eslint/no-unsafe-function-type": "off",
       
-      // Disable React Hook dependency warnings (can be re-enabled later)
+      // Disable React rules that are noisy
+      "react/no-unescaped-entities": "off",
       "react-hooks/exhaustive-deps": "warn",
+      
+      // Disable Next.js rules that are noisy
+      "@next/next/no-html-link-for-pages": "warn",
+      "@next/next/no-img-element": "warn",
       
       // Keep some important rules as warnings
       "prefer-const": "warn"
     },
     ignores: [
-      // Ignore generated files
+      // Ignore generated files completely
       "src/generated/**/*",
       "prisma/generated/**/*",
-      "*.generated.*"
+      "*.generated.*",
+      ".next/**/*",
+      "node_modules/**/*"
     ]
   }
 ];
