@@ -3,11 +3,11 @@ import { haloPSA } from '@/lib/halopsa'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> }
 ) {
+  const params = await context.params
   try {
-    const resolvedParams = await params
-    const ticketId = parseInt(resolvedParams.id)
+    const ticketId = parseInt(params.id)
     
     if (isNaN(ticketId)) {
       return NextResponse.json({
