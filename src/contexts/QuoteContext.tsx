@@ -272,6 +272,7 @@ function quoteReducer(state: QuoteState, action: QuoteAction): QuoteState {
 interface QuoteContextType {
   state: QuoteState
   dispatch: React.Dispatch<QuoteAction>
+  initialQuote?: any // Add access to initial quote data
   // Convenience methods
   updateCustomer: (customer: CustomerInfo) => void
   updateSetupServices: (services: SetupService[]) => void
@@ -297,17 +298,50 @@ const QuoteIdContext = createContext<string | undefined>(undefined)
 export function QuoteProvider({ children, initialQuote }: QuoteProviderProps) {
   // If we have an initial quote, use it to populate the state
   const initializedState = initialQuote ? {
-    customer: initialQuote.customerData,
-    setupServices: initialQuote.setupServices,
-    monthlyServices: initialQuote.monthlyServices,
-    supportDevices: initialQuote.supportDevices,
-    otherLaborData: initialQuote.otherLaborData,
-    upfrontPayment: initialQuote.upfrontPayment,
-    calculations: initialQuote.calculations || undefined,
+    customer: initialQuote.customerData || initialCustomer,
+    setupServices: initialQuote.setupServices || DEFAULT_SETUP_SERVICES,
+    monthlyServices: initialQuote.monthlyServices || DEFAULT_MONTHLY_SERVICES_DATA,
+    supportDevices: initialQuote.supportDevices || [],
+    otherLaborData: initialQuote.otherLaborData || { percentage: 5, customItems: [] },
+    upfrontPayment: initialQuote.upfrontPayment || 0,
+    calculations: initialQuote.calculations || (initialQuote ? {
+      customer: initialQuote.customerData || initialCustomer,
+      services: [],
+      setupServices: initialQuote.setupServices || [],
+      laborRates: {
+        level1: { cost: 22, priceBusinessHours: 155, priceAfterHours: 155 },
+        level2: { cost: 37, priceBusinessHours: 185, priceAfterHours: 275 }, 
+        level3: { cost: 46, priceBusinessHours: 275, priceAfterHours: 375 }
+      },
+      totals: {
+        monthlyTotal: initialQuote.originalMonthlyTotal || initialQuote.monthlyTotal,
+        toolsSoftware: 0, // Will be calculated
+        supportLabor: 0, // Will be calculated  
+        otherLabor: 0, // Will be calculated
+        haas: 0,
+        warranty: 0,
+        setupCosts: initialQuote.setupCosts || 0,
+        contractTotal: initialQuote.contractTotal || 0,
+        upfrontPayment: initialQuote.upfrontPayment || 0,
+        deferredSetupMonthly: 0, // Will be calculated
+        discountType: initialQuote.discountType,
+        discountValue: initialQuote.discountValue,
+        discountedTotal: initialQuote.discountedTotal || (initialQuote.discountType !== 'none' ? initialQuote.monthlyTotal : undefined)
+      }
+    } : undefined),
     currentStep: 1,
-    currentMonthlyTab: '',
+    currentMonthlyTab: 'tools',
     quoteSummaryExpanded: false
   } : initialState
+  
+  // Debug logging
+  if (initialQuote) {
+    console.log('Loading quote data:', {
+      hasMonthlyServices: !!initialQuote.monthlyServices,
+      toolsLength: initialQuote.monthlyServices?.variableCostTools?.length,
+      sampleTool: initialQuote.monthlyServices?.variableCostTools?.[0]
+    })
+  }
   
   const [state, dispatch] = useReducer(quoteReducer, initializedState)
   const { devices: configDevices, loading: configLoading } = useSupportDevices()
@@ -343,6 +377,7 @@ export function QuoteProvider({ children, initialQuote }: QuoteProviderProps) {
   const contextValue: QuoteContextType = useMemo(() => ({
     state,
     dispatch,
+    initialQuote,
     updateCustomer: (customer: CustomerInfo) => dispatch({ type: 'UPDATE_CUSTOMER', payload: customer }),
     updateSetupServices: (services: SetupService[]) => dispatch({ type: 'UPDATE_SETUP_SERVICES', payload: services }),
     updateMonthlyServices: (services: MonthlyServicesData) => dispatch({ type: 'UPDATE_MONTHLY_SERVICES', payload: services }),
@@ -352,7 +387,7 @@ export function QuoteProvider({ children, initialQuote }: QuoteProviderProps) {
     setCurrentStep: (step: number) => dispatch({ type: 'SET_CURRENT_STEP', payload: step }),
     setCurrentMonthlyTab: (tab: string) => dispatch({ type: 'SET_CURRENT_MONTHLY_TAB', payload: tab }),
     setQuoteSummaryExpanded: (expanded: boolean) => dispatch({ type: 'SET_QUOTE_SUMMARY_EXPANDED', payload: expanded })
-  }), [state])
+  }), [state, initialQuote])
 
   return (
     <QuoteContext.Provider value={contextValue}>

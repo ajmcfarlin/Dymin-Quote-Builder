@@ -17,15 +17,22 @@ interface PricingSummaryProps {
   onExpandToggle?: (expanded: boolean) => void
   isExpanded?: boolean
   maxHeight?: number | null
-  onDiscountChange?: (discountType: 'none' | 'percentage' | 'override' | 'margin_override' | 'raw_dollar' | 'per_user', discountValue: number) => void
   editMode?: boolean
   quoteId?: string
+  savedQuoteTotals?: {
+    monthlyTotal: number
+    originalMonthlyTotal?: number
+    contractTotal: number
+    setupCosts: number
+    upfrontPayment: number
+    discountType?: string
+    discountValue?: number
+    discountedTotal?: number
+  }
 }
 
-export function PricingSummary({ calculations, monthlyServices, supportDevices, setupServices, onExpandToggle, maxHeight, onDiscountChange, editMode = false, quoteId }: PricingSummaryProps) {
+export function PricingSummary({ calculations, monthlyServices, supportDevices, setupServices, onExpandToggle, maxHeight, editMode = false, quoteId, savedQuoteTotals }: PricingSummaryProps) {
   const [isExpanded, setIsExpanded] = useState(false)
-  const [discountType, setDiscountType] = useState<'none' | 'percentage' | 'override' | 'margin_override' | 'raw_dollar' | 'per_user'>('none')
-  const [discountValue, setDiscountValue] = useState<number>(0)
   const [isGenerating, setIsGenerating] = useState(false)
   
 
@@ -78,97 +85,7 @@ export function PricingSummary({ calculations, monthlyServices, supportDevices, 
     }).filter(tool => tool.extendedPrice > 0)
   }
 
-  // Get comprehensive labor breakdown with hours and rates
-  const getLaborBreakdown = () => {
-    if (!supportDevices || !calculations?.customer) return []
-    
-    const laborBreakdown = supportDevices
-      .filter(device => device.isActive && device.quantity > 0)
-      .map(device => {
-        const costRates = { 1: 22, 2: 37, 3: 46 }
-        const priceRates = { 
-          1: { business: 155, afterHours: 155 },
-          2: { business: 185, afterHours: 275 },
-          3: { business: 275, afterHours: 375 }
-        }
 
-        const calculateServiceTypeCost = (hours: any) => {
-          const skillLevel = device.skillLevel as 1 | 2 | 3
-          const cost = device.quantity * (
-            (hours.onsiteBusiness + hours.remoteBusiness + hours.onsiteAfterHours + hours.remoteAfterHours) * costRates[skillLevel]
-          )
-          
-          const businessHoursPrice = device.quantity * (
-            (hours.onsiteBusiness + hours.remoteBusiness) * priceRates[skillLevel].business
-          )
-          const afterHoursPrice = device.quantity * (
-            (hours.onsiteAfterHours + hours.remoteAfterHours) * priceRates[skillLevel].afterHours
-          )
-          const price = businessHoursPrice + afterHoursPrice
-          
-          const totalHours = hours.onsiteBusiness + hours.remoteBusiness + hours.onsiteAfterHours + hours.remoteAfterHours
-          
-          return { cost, price, hours: totalHours }
-        }
-
-        const predictable = calculateServiceTypeCost(device.hours.predictable)
-        const reactive = calculateServiceTypeCost(device.hours.reactive)
-        const emergency = calculateServiceTypeCost(device.hours.emergency)
-        
-        const totalHours = predictable.hours + reactive.hours + emergency.hours
-        const totalCost = predictable.cost + reactive.cost + emergency.cost
-        const totalPrice = predictable.price + reactive.price + emergency.price
-
-        return {
-          name: device.name,
-          quantity: device.quantity,
-          skillLevel: device.skillLevel,
-          totalHours: totalHours * device.quantity,
-          totalCost,
-          totalPrice,
-          breakdown: {
-            predictable: { hours: predictable.hours, cost: predictable.cost, price: predictable.price },
-            reactive: { hours: reactive.hours, cost: reactive.cost, price: reactive.price },
-            emergency: { hours: emergency.hours, cost: emergency.cost, price: emergency.price }
-          }
-        }
-      })
-
-    return laborBreakdown
-  }
-
-  // Handle discount changes
-  const handleDiscountChange = (type: 'none' | 'percentage' | 'override' | 'margin_override' | 'raw_dollar' | 'per_user', value: number) => {
-    setDiscountType(type)
-    setDiscountValue(value)
-    onDiscountChange?.(type, value)
-  }
-
-  // Calculate discounted total
-  const calculateDiscountedTotal = (originalTotal: number) => {
-    if (!calculations?.customer) return originalTotal
-    
-    switch (discountType) {
-      case 'percentage':
-        return discountValue > 0 ? originalTotal * (1 - discountValue / 100) : originalTotal
-      case 'override':
-        return discountValue > 0 ? discountValue : originalTotal
-      case 'margin_override':
-        // Set margin to specific percentage - calculate price from cost
-        if (discountValue > 0 && calculations?.totals) {
-          const totalCost = calculations.totals.supportLabor * 0.6 // Rough cost estimate
-          return totalCost / (1 - discountValue / 100)
-        }
-        return originalTotal
-      case 'raw_dollar':
-        return discountValue > 0 ? originalTotal - discountValue : originalTotal
-      case 'per_user':
-        const totalUsers = (calculations.customer.users.full || 0) + (calculations.customer.users.emailOnly || 0)
-        return discountValue > 0 && totalUsers > 0 ? discountValue * totalUsers : originalTotal
-      default:
-        return originalTotal
-    }
-  }
 
   // Generate/Update quote function
   const handleGenerateQuote = async () => {
@@ -261,8 +178,21 @@ export function PricingSummary({ calculations, monthlyServices, supportDevices, 
     : calculateToolsCostsFromInfrastructure()
     
 
-  // Ensure totals has safe defaults
-  const safeTotals = {
+  // Use saved quote totals if available (edit mode), otherwise use calculated totals
+  const safeTotals = savedQuoteTotals ? {
+    monthlyTotal: savedQuoteTotals.monthlyTotal,
+    toolsSoftware: totals?.toolsSoftware || 0,
+    deferredSetupMonthly: totals?.deferredSetupMonthly || 0,
+    supportLabor: totals?.supportLabor || 0,
+    otherLabor: totals?.otherLabor || 0,
+    contractTotal: savedQuoteTotals.contractTotal,
+    setupCosts: savedQuoteTotals.setupCosts,
+    upfrontPayment: savedQuoteTotals.upfrontPayment,
+    discountedTotal: savedQuoteTotals.discountedTotal,
+    discountType: savedQuoteTotals.discountType,
+    discountValue: savedQuoteTotals.discountValue,
+    originalMonthlyTotal: savedQuoteTotals.originalMonthlyTotal
+  } : {
     monthlyTotal: totals?.monthlyTotal || 0,
     toolsSoftware: totals?.toolsSoftware || 0,
     deferredSetupMonthly: totals?.deferredSetupMonthly || 0,
@@ -270,7 +200,10 @@ export function PricingSummary({ calculations, monthlyServices, supportDevices, 
     otherLabor: totals?.otherLabor || 0,
     contractTotal: totals?.contractTotal || 0,
     setupCosts: totals?.setupCosts || 0,
-    upfrontPayment: totals?.upfrontPayment || 0
+    upfrontPayment: totals?.upfrontPayment || 0,
+    discountedTotal: totals?.discountedTotal,
+    discountType: totals?.discountType,
+    discountValue: totals?.discountValue
   }
 
   const formatCurrency = (amount: number) => {
@@ -411,12 +344,36 @@ export function PricingSummary({ calculations, monthlyServices, supportDevices, 
               </div>
               {isExpanded && supportDevices && (
                 <div className="pl-4 space-y-1 text-xs border-l-2 border-gray-600 mb-2">
-                  {supportDevices.filter(device => device.isActive && device.quantity > 0).map((device, index) => (
-                    <div key={index} className="flex justify-between text-gray-300">
-                      <span>{device.name} × {device.quantity}</span>
-                      <span>{formatCurrency(getLaborBreakdown().find(labor => labor.name === device.name)?.totalPrice || 0)}</span>
-                    </div>
-                  ))}
+                  {supportDevices.filter(device => device.isActive && device.quantity > 0).map((device, index) => {
+                    // Calculate individual device price
+                    const priceRates = { 
+                      1: { business: 155, afterHours: 155 },
+                      2: { business: 185, afterHours: 275 },
+                      3: { business: 275, afterHours: 375 }
+                    }
+                    
+                    const skillLevel = device.skillLevel as 1 | 2 | 3
+                    
+                    const businessHours = device.hours.predictable.onsiteBusiness + device.hours.predictable.remoteBusiness +
+                                        device.hours.reactive.onsiteBusiness + device.hours.reactive.remoteBusiness +
+                                        device.hours.emergency.onsiteBusiness + device.hours.emergency.remoteBusiness
+                    
+                    const afterHours = device.hours.predictable.onsiteAfterHours + device.hours.predictable.remoteAfterHours +
+                                     device.hours.reactive.onsiteAfterHours + device.hours.reactive.remoteAfterHours +
+                                     device.hours.emergency.onsiteAfterHours + device.hours.emergency.remoteAfterHours
+                    
+                    const price = device.quantity * (
+                      businessHours * priceRates[skillLevel].business +
+                      afterHours * priceRates[skillLevel].afterHours
+                    )
+                    
+                    return (
+                      <div key={index} className="flex justify-between text-gray-300">
+                        <span>{device.name} × {device.quantity}</span>
+                        <span>{formatCurrency(price)}</span>
+                      </div>
+                    )
+                  })}
                 </div>
               )}
               
@@ -429,111 +386,22 @@ export function PricingSummary({ calculations, monthlyServices, supportDevices, 
           </div>
         </div>
 
-        {/* Comprehensive Labor Breakdown */}
-        {isExpanded && getLaborBreakdown().length > 0 && (
-          <div className="border-t border-gray-600 pt-4">
-            <h4 className="font-semibold text-lg text-white mb-3">Labor Breakdown</h4>
-            <div className="space-y-2">
-              {getLaborBreakdown().map((labor, index) => (
-                <div key={index} className="bg-gray-700 p-2 rounded-md">
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="text-white font-medium text-sm">{labor.name}</span>
-                    <span className="text-white text-xs">L{labor.skillLevel} | {labor.quantity}x</span>
-                  </div>
-                  <div className="flex justify-between items-center text-xs">
-                    <div className="flex gap-3">
-                      <span className="text-gray-300">P: {labor.breakdown.predictable.hours.toFixed(1)}h</span>
-                      <span className="text-gray-300">R: {labor.breakdown.reactive.hours.toFixed(1)}h</span>
-                      <span className="text-gray-300">E: {labor.breakdown.emergency.hours.toFixed(1)}h</span>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-white font-medium">{formatCurrency(labor.totalPrice)}</div>
-                      <div className="text-gray-300">{labor.totalHours.toFixed(1)} hrs</div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
 
-        {/* Discount Controls */}
-        <div className="border-t border-gray-600 pt-4">
-          <h4 className="font-semibold text-white mb-3">Discount Options</h4>
-          <div className="space-y-3">
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Discount Type</label>
-              <select
-                value={discountType}
-                onChange={(e) => handleDiscountChange(e.target.value as any, discountValue)}
-                className="w-full px-3 py-2 text-sm border border-gray-600 rounded bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="none">No Discount</option>
-                <option value="percentage">Percentage Discount</option>
-                <option value="raw_dollar">Raw Dollar Discount</option>
-                <option value="margin_override">Margin Override</option>
-                <option value="per_user">Price Per User</option>
-                <option value="override">Total Price Override</option>
-              </select>
-            </div>
-            
-            {discountType !== 'none' && (
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">
-                  {discountType === 'percentage' && 'Discount %'}
-                  {discountType === 'raw_dollar' && 'Discount Amount ($)'}
-                  {discountType === 'margin_override' && 'Target Margin %'}
-                  {discountType === 'per_user' && 'Price Per User ($)'}
-                  {discountType === 'override' && 'Total Price Override ($)'}
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  step={(['percentage', 'margin_override'].includes(discountType)) ? '0.1' : '0.01'}
-                  max={(['percentage', 'margin_override'].includes(discountType)) ? '100' : undefined}
-                  value={discountValue}
-                  onChange={(e) => handleDiscountChange(discountType, parseFloat(e.target.value) || 0)}
-                  className="w-full px-3 py-2 text-sm border border-gray-600 rounded bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder={
-                    discountType === 'percentage' ? '10' :
-                    discountType === 'raw_dollar' ? '5000' :
-                    discountType === 'margin_override' ? '25' :
-                    discountType === 'per_user' ? '150' :
-                    '50000'
-                  }
-                />
-              </div>
-            )}
-          </div>
-        </div>
 
         <div className="border-t border-gray-600 pt-4">
           <div className="flex justify-between text-lg font-bold">
             <span className="text-white">Monthly Total:</span>
             <span style={{ color: '#15bef0' }}>
-              {formatCurrency(calculateDiscountedTotal(
+              {formatCurrency(
                 hasActiveMonthlyTools 
                   ? safeTotals.monthlyTotal 
                   : (safeTotals.monthlyTotal - safeTotals.toolsSoftware + toolsTotal)
-              ))}
+              )}
             </span>
           </div>
-          {discountType !== 'none' && (
-            <div className="text-sm text-gray-300 mt-1">
-              Original Monthly: {formatCurrency(
-                hasActiveMonthlyTools 
-                  ? safeTotals.monthlyTotal 
-                  : (safeTotals.monthlyTotal - safeTotals.toolsSoftware + toolsTotal)
-              )} 
-              {discountType === 'percentage' && ` (${discountValue}% discount)`}
-              {discountType === 'raw_dollar' && ` (-${formatCurrency(discountValue)} discount)`}
-              {discountType === 'margin_override' && ` (${discountValue}% margin)`}
-              {discountType === 'per_user' && ` ($${discountValue}/user pricing)`}
-            </div>
-          )}
           <div className="text-sm text-gray-300 mt-1">
             Total Contract: {formatCurrency(
-              calculateDiscountedTotal(
+              (
                 hasActiveMonthlyTools 
                   ? safeTotals.monthlyTotal 
                   : (safeTotals.monthlyTotal - safeTotals.toolsSoftware + toolsTotal)
@@ -572,6 +440,34 @@ export function PricingSummary({ calculations, monthlyServices, supportDevices, 
             <div className="flex justify-between">
               <span className="text-white">Phone Extensions:</span>
               <span className="text-white">{calculations.customer.infrastructure.phoneExtensions || 0}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-white">WiFi Access Points:</span>
+              <span className="text-white">{calculations.customer.infrastructure.wifiAccessPoints || 0}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-white">Firewalls:</span>
+              <span className="text-white">{calculations.customer.infrastructure.firewalls || 0}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-white">Switches:</span>
+              <span className="text-white">{calculations.customer.infrastructure.switches || 0}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-white">UPS:</span>
+              <span className="text-white">{calculations.customer.infrastructure.ups || 0}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-white">NAS:</span>
+              <span className="text-white">{calculations.customer.infrastructure.nas || 0}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-white">Mobile Devices:</span>
+              <span className="text-white">{calculations.customer.infrastructure.managedMobileDevices || 0}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-white">Email Domains:</span>
+              <span className="text-white">{calculations.customer.infrastructure.domainsUsedForEmail || 0}</span>
             </div>
           </div>
         </div>

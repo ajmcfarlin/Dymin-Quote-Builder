@@ -54,15 +54,16 @@ model Quote {
   otherLaborData Json     // OtherLaborData object
   
   // Financial summary
-  monthlyTotal    Float   @default(0)
-  setupCosts      Float   @default(0)
-  upfrontPayment  Float   @default(0)
-  contractTotal   Float   @default(0)
+  monthlyTotal        Float   @default(0) // This will be the final amount (discounted if applicable)
+  originalMonthlyTotal Float?            // Original pre-discount amount (for reference)
+  setupCosts          Float   @default(0)
+  upfrontPayment      Float   @default(0)
+  contractTotal       Float   @default(0)
   
   // Discount information
   discountType    String? // 'none', 'percentage', 'raw_dollar', 'margin_override', 'per_user', 'override'
   discountValue   Float?  @default(0)
-  discountedTotal Float?  @default(0)
+  discountedTotal Float?  @default(0) // Deprecated - keeping for backwards compatibility
   
   // Margins and analysis (for internal use)
   estimatedCost   Float?  @default(0)

@@ -4,11 +4,15 @@ import React, { useState } from 'react'
 import { CustomerInfo, QuoteCalculation } from '@/types/quote'
 import { QuoteAPI, stateToCreateQuoteRequest } from '@/lib/quoteApi'
 import { useRouter } from 'next/navigation'
+import { useQuote } from '@/contexts/QuoteContext'
 
 interface ReviewDiscountTabProps {
   calculations?: QuoteCalculation
   customer: CustomerInfo
   supportDevices?: any[]
+  monthlyServices?: any
+  otherLaborData?: any
+  setupServices?: any[]
   upfrontPayment: number
   onUpfrontPaymentChange: (payment: number) => void
   editMode?: boolean
@@ -17,11 +21,23 @@ interface ReviewDiscountTabProps {
 
 type DiscountType = 'none' | 'percentage' | 'raw_dollar' | 'margin_override' | 'per_user' | 'override'
 
-export function ReviewDiscountTab({ calculations, customer, supportDevices, upfrontPayment, onUpfrontPaymentChange, editMode = false, quoteId }: ReviewDiscountTabProps) {
+export function ReviewDiscountTab({ calculations, customer, supportDevices, monthlyServices, otherLaborData, setupServices, upfrontPayment, onUpfrontPaymentChange, editMode = false, quoteId }: ReviewDiscountTabProps) {
   const [discountType, setDiscountType] = useState<DiscountType>('none')
   const [discountValue, setDiscountValue] = useState<number>(0)
   const [isGenerating, setIsGenerating] = useState(false)
   const router = useRouter()
+  const { initialQuote } = useQuote()
+
+  // Load existing discount values in edit mode
+  React.useEffect(() => {
+    if (editMode && initialQuote) {
+      // Check if we have discount data from the saved quote
+      if (initialQuote.discountType && initialQuote.discountType !== 'none') {
+        setDiscountType(initialQuote.discountType as DiscountType)
+        setDiscountValue(initialQuote.discountValue || 0)
+      }
+    }
+  }, [editMode, initialQuote])
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -51,8 +67,8 @@ export function ReviewDiscountTab({ calculations, customer, supportDevices, upfr
         }
         return originalTotal
       case 'per_user':
-        const totalUsers = (calculations.customer.users.full || 0) + (calculations.customer.users.emailOnly || 0)
-        return discountValue > 0 && totalUsers > 0 ? discountValue * totalUsers : originalTotal
+        const fullUsers = calculations.customer.users.full || 0
+        return discountValue > 0 && fullUsers > 0 ? discountValue * fullUsers : originalTotal
       case 'override':
         return discountValue > 0 ? discountValue : originalTotal
       default:
@@ -97,7 +113,7 @@ export function ReviewDiscountTab({ calculations, customer, supportDevices, upfr
   const laborHours = calculateLaborHours()
   const originalTotal = totals?.monthlyTotal || 0
   const discountedTotal = calculateDiscountedTotal(originalTotal)
-  const totalUsers = (customer.users.full || 0) + (customer.users.emailOnly || 0)
+  const totalUsers = customer.users.full || 0
   
   // Calculate proportional discounts for each component
   const hasDiscount = discountType !== 'none' && discountValue > 0
@@ -165,22 +181,32 @@ export function ReviewDiscountTab({ calculations, customer, supportDevices, upfr
       // Build quote state object similar to QuoteContext
       const quoteState = {
         customer,
-        setupServices: calculations?.setupServices || [],
-        monthlyServices: { variableCostTools: [] }, // This should be populated from actual data
+        setupServices: setupServices || [],
+        monthlyServices: monthlyServices || { variableCostTools: [] },
         supportDevices: supportDevices || [],
-        otherLaborData: {},
+        otherLaborData: otherLaborData || { percentage: 5, customItems: [] },
         upfrontPayment,
         calculations
       }
+      
+      // Debug logging
+      console.log('Saving quote with data:', {
+        toolsLength: quoteState.monthlyServices?.variableCostTools?.length,
+        sampleTool: quoteState.monthlyServices?.variableCostTools?.[0],
+        monthlyServices: quoteState.monthlyServices
+      })
+
+      const discountInfo = discountType !== 'none' && discountValue > 0 ? {
+        discountType,
+        discountValue,
+        discountedTotal
+      } : undefined
 
       if (editMode && quoteId) {
         // Update existing quote
         const updateRequest = {
           id: quoteId,
-          ...stateToCreateQuoteRequest(quoteState),
-          discountType,
-          discountValue,
-          discountedTotal: discountType !== 'none' && discountValue > 0 ? discountedTotal : undefined
+          ...stateToCreateQuoteRequest(quoteState, discountInfo)
         }
         const updatedQuote = await QuoteAPI.updateQuote(updateRequest)
         
@@ -188,12 +214,7 @@ export function ReviewDiscountTab({ calculations, customer, supportDevices, upfr
         router.push(`/dashboard/quotes/${updatedQuote.id}`)
       } else {
         // Create new quote
-        const request = {
-          ...stateToCreateQuoteRequest(quoteState),
-          discountType,
-          discountValue,
-          discountedTotal: discountType !== 'none' && discountValue > 0 ? discountedTotal : undefined
-        }
+        const request = stateToCreateQuoteRequest(quoteState, discountInfo)
         const savedQuote = await QuoteAPI.createQuote(request)
         
         alert('✅ Quote generated successfully!')
@@ -528,7 +549,7 @@ export function ReviewDiscountTab({ calculations, customer, supportDevices, upfr
               {/* Hardware Metrics */}
               {(laborHours.level1 + laborHours.level2 + laborHours.level3) > 0 && (
                 <div className="border-t pt-6">
-                  <h4 className="font-semibold text-gray-900 text-lg mb-4">Hardware Metrics</h4>
+                  <h4 className="font-semibold text-gray-900 text-lg mb-4">Labor Metrics</h4>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between py-1">
                       <span className="text-gray-700">Total Monthly Support Labor</span>

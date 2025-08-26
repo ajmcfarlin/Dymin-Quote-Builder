@@ -187,6 +187,7 @@ export async function POST(request: NextRequest) {
         supportDevices: body.supportDevices as any,
         otherLaborData: body.otherLaborData as any,
         monthlyTotal: body.monthlyTotal,
+        originalMonthlyTotal: body.originalMonthlyTotal,
         setupCosts: body.setupCosts,
         upfrontPayment: body.upfrontPayment,
         contractTotal: body.contractTotal,

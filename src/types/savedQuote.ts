@@ -29,7 +29,8 @@ export interface SavedQuote {
   otherLaborData: OtherLaborData
   
   // Financial summary
-  monthlyTotal: number
+  monthlyTotal: number // Final amount (discounted if applicable)
+  originalMonthlyTotal?: number // Original pre-discount amount (for reference)
   setupCosts: number
   upfrontPayment: number
   contractTotal: number
@@ -66,7 +67,8 @@ export interface CreateQuoteRequest {
   monthlyServices: MonthlyServicesData
   supportDevices: any[]
   otherLaborData: OtherLaborData
-  monthlyTotal: number
+  monthlyTotal: number // Final amount (discounted if applicable)
+  originalMonthlyTotal?: number // Original pre-discount amount (for reference)
   setupCosts: number
   upfrontPayment: number
   contractTotal: number

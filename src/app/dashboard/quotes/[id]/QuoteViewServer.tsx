@@ -110,6 +110,7 @@ export default async function QuoteViewServer({ quoteId }: QuoteViewServerProps)
           haloPsaQuoteId: quote.haloPsaQuoteId || undefined,
           notes: quote.notes || undefined,
           clientNotes: quote.clientNotes || undefined,
+          originalMonthlyTotal: quote.originalMonthlyTotal ?? undefined,
           // Fix user object type casting
           user: quote.user ? {
             name: quote.user.name,

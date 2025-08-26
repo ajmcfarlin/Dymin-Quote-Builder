@@ -19,7 +19,7 @@ interface QuoteWizardProps {
 
 export function QuoteWizard({ readOnly = false, editMode = false, quoteId }: QuoteWizardProps) {
   // Use context hooks instead of local state
-  const { state, updateSetupServices, updateMonthlyServices, updateSupportDevices, updateOtherLaborData, updateUpfrontPayment } = useQuote()
+  const { state, updateSetupServices, updateMonthlyServices, updateSupportDevices, updateOtherLaborData, updateUpfrontPayment, initialQuote } = useQuote()
   const { currentStep, currentMonthlyTab, quoteSummaryExpanded, setCurrentStep, setCurrentMonthlyTab, setQuoteSummaryExpanded } = useQuoteUI()
   const { customer, updateCustomer } = useQuoteCustomer()
   const calculations = useQuoteCalculations()
@@ -286,6 +286,9 @@ export function QuoteWizard({ readOnly = false, editMode = false, quoteId }: Quo
           calculations={calculations}
           customer={customer}
           supportDevices={state.supportDevices}
+          monthlyServices={state.monthlyServices}
+          otherLaborData={state.otherLaborData}
+          setupServices={state.setupServices}
           upfrontPayment={state.upfrontPayment}
           onUpfrontPaymentChange={updateUpfrontPayment}
           editMode={editMode}
@@ -312,6 +315,16 @@ export function QuoteWizard({ readOnly = false, editMode = false, quoteId }: Quo
             isExpanded={quoteSummaryExpanded}
             maxHeight={maxContentHeight}
             editMode={editMode}
+            savedQuoteTotals={editMode && initialQuote ? {
+              monthlyTotal: initialQuote.monthlyTotal,
+              originalMonthlyTotal: initialQuote.originalMonthlyTotal,
+              contractTotal: initialQuote.contractTotal,
+              setupCosts: initialQuote.setupCosts,
+              upfrontPayment: initialQuote.upfrontPayment,
+              discountType: initialQuote.discountType,
+              discountValue: initialQuote.discountValue,
+              discountedTotal: initialQuote.discountedTotal
+            } : undefined}
             quoteId={quoteId}
           />
         </div>

@@ -146,15 +146,22 @@ function calculateSupportDeviceCosts(device: any) {
 }
 
 // Helper function to convert QuoteContext state to CreateQuoteRequest
-export function stateToCreateQuoteRequest(state: {
-  customer: any
-  setupServices: any[]
-  monthlyServices: any
-  supportDevices: any[]
-  otherLaborData: any
-  upfrontPayment: number
-  calculations?: any
-}): CreateQuoteRequest {
+export function stateToCreateQuoteRequest(
+  state: {
+    customer: any
+    setupServices: any[]
+    monthlyServices: any
+    supportDevices: any[]
+    otherLaborData: any
+    upfrontPayment: number
+    calculations?: any
+  },
+  discountInfo?: {
+    discountType: string
+    discountValue: number
+    discountedTotal: number
+  }
+): CreateQuoteRequest {
   const totals = state.calculations?.totals
   
   // Calculate and add monthly prices to support devices
@@ -167,6 +174,15 @@ export function stateToCreateQuoteRequest(state: {
     return { ...device, monthlyPrice: costs.price }
   })
   
+  // Use discount info parameter if provided, otherwise fall back to totals
+  const hasDiscount = (discountInfo?.discountType !== 'none' && discountInfo?.discountedTotal) || 
+                     (totals?.discountedTotal && totals?.discountType !== 'none')
+  
+  const finalDiscountedTotal = discountInfo?.discountedTotal || totals?.discountedTotal
+  const finalMonthlyTotal = hasDiscount ? finalDiscountedTotal : (totals?.monthlyTotal || 0)
+  const originalMonthlyTotal = hasDiscount ? (totals?.monthlyTotal || 0) : null
+  const finalContractTotal = finalMonthlyTotal * (state.customer.contractMonths || 36) + (state.upfrontPayment || 0)
+  
   return {
     customerName: state.customer.companyName,
     customerEmail: state.customer.email,
@@ -175,13 +191,14 @@ export function stateToCreateQuoteRequest(state: {
     monthlyServices: state.monthlyServices,
     supportDevices: enrichedSupportDevices,
     otherLaborData: state.otherLaborData,
-    monthlyTotal: totals?.monthlyTotal || 0,
+    monthlyTotal: finalMonthlyTotal,
+    originalMonthlyTotal,
     setupCosts: totals?.setupCosts || 0,
     upfrontPayment: state.upfrontPayment,
-    contractTotal: totals?.contractTotal || 0,
-    discountType: totals?.discountType,
-    discountValue: totals?.discountValue,
-    discountedTotal: totals?.discountedTotal
+    contractTotal: finalContractTotal,
+    discountType: discountInfo?.discountType || totals?.discountType,
+    discountValue: discountInfo?.discountValue || totals?.discountValue,
+    discountedTotal: finalDiscountedTotal // Keep for backwards compatibility
   }
 }
 

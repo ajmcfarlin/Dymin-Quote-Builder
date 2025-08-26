@@ -23,8 +23,8 @@ export function OtherLaborSelector({ otherLaborData, onChange, supportLaborTotal
     }).format(amount)
   }
 
-  const budgetTotal = supportLaborTotal * (otherLaborData.percentage / 100)
-  const customItemsTotal = otherLaborData.customItems.reduce((sum, item) => sum + item.price, 0)
+  const budgetTotal = supportLaborTotal * ((otherLaborData?.percentage || 0) / 100)
+  const customItemsTotal = (otherLaborData?.customItems || []).reduce((sum, item) => sum + item.price, 0)
   const remainingBudget = budgetTotal - customItemsTotal
 
   const addCustomItem = () => {
@@ -38,7 +38,7 @@ export function OtherLaborSelector({ otherLaborData, onChange, supportLaborTotal
 
     onChange({
       ...otherLaborData,
-      customItems: [...otherLaborData.customItems, newItem]
+      customItems: [...(otherLaborData?.customItems || []), newItem]
     })
 
     setNewItemName('')
@@ -49,7 +49,7 @@ export function OtherLaborSelector({ otherLaborData, onChange, supportLaborTotal
   const removeCustomItem = (itemId: string) => {
     onChange({
       ...otherLaborData,
-      customItems: otherLaborData.customItems.filter(item => item.id !== itemId)
+      customItems: (otherLaborData?.customItems || []).filter(item => item.id !== itemId)
     })
   }
 
@@ -80,9 +80,9 @@ export function OtherLaborSelector({ otherLaborData, onChange, supportLaborTotal
         </div>
         
         <CardContent>
-          {otherLaborData.customItems.length > 0 && (
+          {(otherLaborData?.customItems || []).length > 0 && (
             <div className="space-y-3 mb-4">
-              {otherLaborData.customItems.map((item) => (
+              {(otherLaborData?.customItems || []).map((item) => (
                 <div key={item.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <div className="flex-1">
                     <span className="text-sm font-medium text-gray-900">{item.name}</span>
@@ -175,7 +175,7 @@ export function OtherLaborSelector({ otherLaborData, onChange, supportLaborTotal
             </button>
           )}
 
-          {otherLaborData.customItems.length === 0 && !showAddForm && (
+          {(otherLaborData?.customItems || []).length === 0 && !showAddForm && (
             <div className="text-center py-6 text-gray-500">
               <p>No custom labor items added yet.</p>
               <p className="text-sm">Click "Add Custom Labor Item" to get started.</p>

@@ -133,6 +133,7 @@ export async function PUT(
     if (body.supportDevices !== undefined) updateData.supportDevices = body.supportDevices
     if (body.otherLaborData !== undefined) updateData.otherLaborData = body.otherLaborData
     if (body.monthlyTotal !== undefined) updateData.monthlyTotal = body.monthlyTotal
+    if (body.originalMonthlyTotal !== undefined) updateData.originalMonthlyTotal = body.originalMonthlyTotal
     if (body.setupCosts !== undefined) updateData.setupCosts = body.setupCosts
     if (body.upfrontPayment !== undefined) updateData.upfrontPayment = body.upfrontPayment
     if (body.contractTotal !== undefined) updateData.contractTotal = body.contractTotal

@@ -198,8 +198,8 @@ export function SupportLaborSettings() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold text-gray-900">Support Labor Settings</h2>
-          <p className="text-gray-600 mt-1">Configure labor hours for each device type and service category</p>
+          <h2 className="text-xl font-semibold text-gray-900">Support Devices</h2>
+          <p className="text-gray-600 mt-1">Configure support hours for each device type and service category</p>
         </div>
         <div className="flex gap-3">
           <button
@@ -223,46 +223,6 @@ export function SupportLaborSettings() {
         </div>
       </div>
 
-      {/* Labor Rate Reference */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Labor Rate Reference</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="text-left py-2 px-3 font-medium text-gray-700">Skill Level</th>
-                  <th className="text-center py-2 px-3 font-medium text-gray-700">Cost Rate</th>
-                  <th className="text-center py-2 px-3 font-medium text-gray-700">Business Hours Price</th>
-                  <th className="text-center py-2 px-3 font-medium text-gray-700">After Hours Price</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr className="bg-gray-50">
-                  <td className="py-3 px-3 font-medium">Level 1</td>
-                  <td className="py-3 px-3 text-center">$22.00</td>
-                  <td className="py-3 px-3 text-center">$155.00</td>
-                  <td className="py-3 px-3 text-center">$155.00</td>
-                </tr>
-                <tr className="bg-white">
-                  <td className="py-3 px-3 font-medium">Level 2</td>
-                  <td className="py-3 px-3 text-center">$37.00</td>
-                  <td className="py-3 px-3 text-center">$185.00</td>
-                  <td className="py-3 px-3 text-center">$275.00</td>
-                </tr>
-                <tr className="bg-gray-50">
-                  <td className="py-3 px-3 font-medium">Level 3</td>
-                  <td className="py-3 px-3 text-center">$46.00</td>
-                  <td className="py-3 px-3 text-center">$275.00</td>
-                  <td className="py-3 px-3 text-center">$375.00</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Device Selection */}
       <Card>
