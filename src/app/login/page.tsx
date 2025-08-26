@@ -1,17 +1,36 @@
 'use client'
 
-import React, { useState } from 'react'
-import { signIn } from 'next-auth/react'
+import React, { useState, useEffect } from 'react'
+import { signIn, useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { Input } from '@/components/ui/input'
 
 export default function LoginPage() {
+  const { data: session, status } = useSession()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const router = useRouter()
+
+  useEffect(() => {
+    if (status === 'authenticated' && session) {
+      router.push('/dashboard')
+    }
+  }, [session, status, router])
+
+  if (status === 'loading') {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#343333' }}>
+        <div className="text-white">Loading...</div>
+      </div>
+    )
+  }
+
+  if (status === 'authenticated') {
+    return null // Will redirect via useEffect
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
