@@ -30,14 +30,14 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
       {/* Mobile backdrop */}
       {isOpen && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden" 
+          className="fixed inset-0 bg-gray-900 bg-opacity-20 z-40 lg:hidden transition-opacity duration-300"
           onClick={() => setIsOpen(false)}
         />
       )}
 
       {/* Sidebar */}
       <div className={`
-        fixed inset-y-0 left-0 z-50 w-64 shadow-lg transform transition-transform duration-300 ease-in-out
+        fixed inset-y-0 left-0 z-50 w-64 shadow-xl transform transition-all duration-300 ease-out
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
         lg:translate-x-0 lg:static lg:inset-0
       `} style={{ backgroundColor: '#343333' }}>
@@ -51,16 +51,18 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
             />
             <button
               onClick={() => setIsOpen(false)}
-              className="lg:hidden p-2 rounded-md text-gray-300 hover:text-white"
+              className="lg:hidden p-2 rounded-md text-gray-300 hover:text-white transition-all duration-200 hover:scale-110 hover:rotate-90"
             >
-              ✕
+              <span className="text-xl">✕</span>
             </button>
           </div>
 
           {/* Navigation */}
           <nav className="flex-1 px-4 py-6 space-y-2">
             {navigation.map((item) => {
-              const isActive = pathname === item.href
+              const isActive = item.href === '/dashboard/quotes' 
+                ? pathname.startsWith('/dashboard/quotes')
+                : pathname === item.href
               return (
                 <Link
                   key={item.name}
@@ -87,17 +89,15 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
             <div className="flex items-center mb-4">
               <div className="flex-1">
                 <p className="text-sm font-medium text-white">{session?.user?.name}</p>
-                <p className="text-xs text-gray-300">{session?.user?.email}</p>
               </div>
             </div>
             <button
               onClick={handleLogout}
-              className="w-full flex items-center px-4 py-2 text-sm text-gray-300 hover:bg-gray-600 hover:text-white rounded-lg transition-colors"
+              className="w-full flex items-center px-2 py-2 text-sm text-gray-300 hover:bg-gray-600 hover:text-white rounded-lg transition-colors"
             >
               <span className="mr-3">↗</span>
               Sign out
             </button>
-            <div className='text-xs'>made with heart</div>
           </div>
         </div>
       </div>

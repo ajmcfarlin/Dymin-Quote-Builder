@@ -3,8 +3,9 @@ import { haloPSA } from '@/lib/halopsa'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
+  const params = await context.params
   try {
     const ticketId = parseInt(params.id)
     

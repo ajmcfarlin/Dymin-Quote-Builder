@@ -1,63 +1,41 @@
 'use client'
 
-import React, { useState, useEffect, useMemo, useRef } from 'react'
-import { CustomerInfo, SetupService, QuoteCalculation } from '@/types/quote'
-import { MonthlyServicesData } from '@/types/monthlyServices'
-import { calculateQuote } from '@/lib/calculations'
-import { DEFAULT_SETUP_SERVICES } from '@/lib/setupServices'
-import { DEFAULT_FIXED_COST_TOOLS, DEFAULT_VARIABLE_COST_TOOLS } from '@/lib/monthlyServices'
+import React, { useRef, useState, useEffect } from 'react'
 import { CustomerForm } from './CustomerForm'
 import { SetupServiceSelector } from './SetupServiceSelector'
 import { MonthlyServicesSelector } from './MonthlyServicesSelector'
 import { PricingSummary } from './PricingSummary'
 import { SupportLaborSelector } from './SupportLaborSelector'
+import { OtherLaborSelector } from './OtherLaborSelector'
+import { ReviewDiscountTab } from './ReviewDiscountTab'
+import { useQuote, useQuoteUI, useQuoteCustomer, useQuoteCalculations } from '@/contexts/QuoteContext'
+import { calculateSupportDevicesLabor, calculateSetupCosts, DEFAULT_LABOR_RATES } from '@/lib/calculations'
 
-export function QuoteWizard() {
-  const [currentStep, setCurrentStep] = useState(1)
-  const [currentMonthlyTab, setCurrentMonthlyTab] = useState('tools')
-  const [quoteSummaryExpanded, setQuoteSummaryExpanded] = useState(false)
-  const [maxContentHeight, setMaxContentHeight] = useState<number | null>(null)
+interface QuoteWizardProps {
+  readOnly?: boolean
+  editMode?: boolean
+  quoteId?: string
+}
+
+export function QuoteWizard({ readOnly = false, editMode = false, quoteId }: QuoteWizardProps) {
+  // Use context hooks instead of local state
+  const { state, updateSetupServices, updateMonthlyServices, updateSupportDevices, updateOtherLaborData, updateUpfrontPayment, initialQuote } = useQuote()
+  const { currentStep, currentMonthlyTab, quoteSummaryExpanded, setCurrentStep, setCurrentMonthlyTab, setQuoteSummaryExpanded } = useQuoteUI()
+  const { customer, updateCustomer } = useQuoteCustomer()
+  const calculations = useQuoteCalculations()
+  
   const mainContentRef = useRef<HTMLDivElement>(null)
-  const [customer, setCustomer] = useState<CustomerInfo>({
-    companyName: '',
-    address: '',
-    region: 'United States',
-    contractMonths: 36,
-    contractType: 'Managed Services',
-    users: { full: 0, emailOnly: 0 },
-    infrastructure: { workstations: 0, servers: 0, printers: 0, phoneExtensions: 0 }
-  })
-  const [setupServices, setSetupServices] = useState<SetupService[]>(DEFAULT_SETUP_SERVICES)
-  const [monthlyServices, setMonthlyServices] = useState<MonthlyServicesData>({
-    fixedCostTools: DEFAULT_FIXED_COST_TOOLS,
-    variableCostTools: DEFAULT_VARIABLE_COST_TOOLS
-  })
-  const [supportDevices, setSupportDevices] = useState<any[]>([])
-  const [calculations, setCalculations] = useState<QuoteCalculation>()
+  const [maxContentHeight, setMaxContentHeight] = useState<number | null>(null)
 
-  const handleCustomerChange = useMemo(() => (newCustomer: CustomerInfo) => {
-    setCustomer(newCustomer)
-  }, [])
-
-  const handleSetupServicesChange = useMemo(() => (newSetupServices: SetupService[]) => {
-    setSetupServices(newSetupServices)
-  }, [])
-
-  const handleMonthlyServicesChange = useMemo(() => (newMonthlyServices: MonthlyServicesData) => {
-    setMonthlyServices(newMonthlyServices)
-  }, [])
-
-  const activeDevices = supportDevices.filter(device => device.isActive)
-  const activeServices = setupServices.filter(service => service.isActive)
-
-  useEffect(() => {
-    // Always include monthly services in calculations if any are active
-    const hasActiveMonthlyServices = monthlyServices.fixedCostTools.some(tool => tool.isActive) || 
-                                   monthlyServices.variableCostTools.some(tool => tool.isActive)
-    const monthlyServicesForCalculation = hasActiveMonthlyServices ? monthlyServices : undefined
-    const newCalculations = calculateQuote(customer, [], setupServices, monthlyServicesForCalculation)
-    setCalculations(newCalculations)
-  }, [customer, setupServices, monthlyServices, currentStep])
+  const activeDevices = state.supportDevices.filter(device => device.isActive)
+  const activeServices = state.setupServices.filter(service => service.isActive)
+  // Calculate total monthly labor costs (support labor + monthly setup portion, excluding tools)
+  const supportLaborTotal = calculateSupportDevicesLabor(state.supportDevices)
+  const totalSetupCosts = calculateSetupCosts(state.setupServices, DEFAULT_LABOR_RATES, customer)
+  const upfrontPayment = state.upfrontPayment
+  const deferredSetupAmount = totalSetupCosts - upfrontPayment
+  const monthlySetupCosts = customer.contractMonths > 0 ? deferredSetupAmount / customer.contractMonths : 0
+  const totalMonthlyLaborCosts = supportLaborTotal + monthlySetupCosts
 
   // Calculate main content height for quote summary max height
   useEffect(() => {
@@ -93,14 +71,14 @@ export function QuoteWizard() {
         {/* Progress Bar */}
         <div className="mb-6">
           <div className="flex items-center justify-between text-sm text-gray-600 mb-2">
-            <span>Step {currentStep} of 2</span>
-            <span>{currentStep === 1 ? 'Quote Setup' : 'Monthly Services'}</span>
+            <span>Step {currentStep} of 3</span>
+            <span>{currentStep === 1 ? 'Quote Setup' : currentStep === 2 ? 'Monthly Services' : 'Review & Discount'}</span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2">
             <div 
               className="h-2 rounded-full transition-all duration-300 ease-in-out"
               style={{ 
-                width: `${(currentStep / 2) * 100}%`,
+                width: `${(currentStep / 3) * 100}%`,
                 backgroundColor: '#15bef0'
               }}
             ></div>
@@ -117,7 +95,6 @@ export function QuoteWizard() {
             }`}
             style={currentStep === 1 ? { borderBottomColor: '#15bef0', color: '#0891b2' } : {}}
           >
-            {currentStep > 1 && <span className="mr-2 text-green-500">✓</span>}
             Customer Info & Setup Services
           </button>
           <button
@@ -134,14 +111,32 @@ export function QuoteWizard() {
           >
             Monthly Managed Services
           </button>
+          
+          <button
+            onClick={() => setCurrentStep(3)}
+            className={`pb-2 border-b-2 font-medium text-sm flex items-center ${
+              currentStep === 3
+                ? 'text-gray-500 hover:text-gray-700 cursor-pointer'
+                : 'border-transparent text-gray-500 hover:text-gray-700 cursor-pointer'
+            }`}
+            style={currentStep === 3 ? { borderBottomColor: '#15bef0', color: '#0891b2' } : {}}
+          >
+            Review & Discount
+          </button>
         </nav>
       </div>
 
       {/* Step 1: Customer Info & Setup Services */}
       {currentStep === 1 && (
         <div className="space-y-6">
-          <CustomerForm value={customer} onChange={handleCustomerChange} />
-          <SetupServiceSelector setupServices={setupServices} customer={customer} onChange={handleSetupServicesChange} />
+          <CustomerForm value={customer} onChange={updateCustomer} />
+          <SetupServiceSelector 
+            setupServices={state.setupServices} 
+            customer={customer} 
+            upfrontPayment={state.upfrontPayment}
+            onChange={updateSetupServices} 
+            onUpfrontPaymentChange={updateUpfrontPayment}
+          />
           
           {/* Continue Button */}
           <div className="flex justify-end">
@@ -200,91 +195,137 @@ export function QuoteWizard() {
               >
                 <span className="w-4 inline-block text-center mr-2">⬢</span>Other Labor
               </button>
-              <button
-                onClick={() => setCurrentMonthlyTab('haas')}
-                className={`py-2 px-1 border-b-2 font-medium text-sm cursor-pointer ${
-                  currentMonthlyTab === 'haas'
-                    ? 'text-white'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-                style={currentMonthlyTab === 'haas' ? { borderBottomColor: '#15bef0', color: '#0891b2' } : {}}
-              >
-                <span className="w-4 inline-block text-center mr-2">▢</span>HaaS
-              </button>
             </nav>
           </div>
 
           {/* Tab Content */}
           {currentMonthlyTab === 'tools' && (
             <MonthlyServicesSelector 
-              monthlyServices={monthlyServices} 
-              onChange={handleMonthlyServicesChange} 
+              monthlyServices={state.monthlyServices} 
+              customer={customer}
+              onChange={updateMonthlyServices} 
             />
           )}
 
           {currentMonthlyTab === 'support' && (
             <SupportLaborSelector 
-              devices={supportDevices} 
-              onChange={setSupportDevices} 
+              devices={state.supportDevices}
+              onChange={updateSupportDevices}
+              customer={customer}
+              setupServices={state.setupServices}
             />
           )}
 
           {currentMonthlyTab === 'other' && (
-            <div className="bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-200 rounded-lg p-8 text-center">
-              <div className="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center" style={{ backgroundColor: '#15bef0' }}>
-                <span className="text-white text-2xl">⬢</span>
-              </div>
-              <h4 className="text-lg font-semibold text-gray-900 mb-2">Other Labor Configuration</h4>
-              <p className="text-gray-600 mb-4">Additional professional services and project work</p>
-              <div className="text-sm text-purple-600 bg-purple-100 rounded-full px-3 py-1 inline-block">
-                Coming Soon
-              </div>
-            </div>
-          )}
-
-          {currentMonthlyTab === 'haas' && (
-            <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-lg p-8 text-center">
-              <div className="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center" style={{ backgroundColor: '#15bef0' }}>
-                <span className="text-white text-2xl">▢</span>
-              </div>
-              <h4 className="text-lg font-semibold text-gray-900 mb-2">Hardware as a Service</h4>
-              <p className="text-gray-600 mb-4">Managed hardware solutions and device lifecycle management</p>
-              <div className="text-sm text-green-600 bg-green-100 rounded-full px-3 py-1 inline-block">
-                Coming Soon
-              </div>
-            </div>
+            <OtherLaborSelector
+              otherLaborData={state.otherLaborData}
+              onChange={updateOtherLaborData}
+              supportLaborTotal={totalMonthlyLaborCosts}
+            />
           )}
 
           {/* Navigation */}
           <div className="flex justify-between">
-            <button
-              onClick={() => setCurrentStep(1)}
-              className="px-6 py-2 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 cursor-pointer"
-            >
-              ← Back to Setup Services
-            </button>
-            <button 
-              className="px-6 py-2 text-white rounded-lg font-medium hover:opacity-90 cursor-pointer"
-              style={{ backgroundColor: '#15bef0' }}
-            >
-              Generate Quote
-            </button>
+            {/* Left button - Back to Setup or Previous Tab */}
+            {currentMonthlyTab === 'tools' ? (
+              <button
+                onClick={() => setCurrentStep(1)}
+                className="px-6 py-2 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 cursor-pointer"
+              >
+                ← Back to Setup Services
+              </button>
+            ) : currentMonthlyTab === 'support' ? (
+              <button
+                onClick={() => setCurrentMonthlyTab('tools')}
+                className="px-6 py-2 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 cursor-pointer"
+              >
+                ← Back to Tools & Licensing
+              </button>
+            ) : (
+              <button
+                onClick={() => setCurrentMonthlyTab('support')}
+                className="px-6 py-2 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 cursor-pointer"
+              >
+                ← Back to Support Labor
+              </button>
+            )}
+
+            {/* Right button - Next Tab or Review */}
+            {currentMonthlyTab === 'tools' ? (
+              <button 
+                onClick={() => setCurrentMonthlyTab('support')}
+                className="px-6 py-2 text-white rounded-lg font-medium hover:opacity-90 cursor-pointer"
+                style={{ backgroundColor: '#15bef0' }}
+              >
+                Continue to Support Labor →
+              </button>
+            ) : currentMonthlyTab === 'support' ? (
+              <button 
+                onClick={() => setCurrentMonthlyTab('other')}
+                className="px-6 py-2 text-white rounded-lg font-medium hover:opacity-90 cursor-pointer"
+                style={{ backgroundColor: '#15bef0' }}
+              >
+                Continue to Other Labor →
+              </button>
+            ) : (
+              <button 
+                onClick={() => setCurrentStep(3)}
+                className="px-6 py-2 text-white rounded-lg font-medium hover:opacity-90 cursor-pointer"
+                style={{ backgroundColor: '#15bef0' }}
+              >
+                Review & Finalize →
+              </button>
+            )}
           </div>
         </div>
       )}
+
+      {/* Step 3: Review & Discount */}
+      {currentStep === 3 && (
+        <ReviewDiscountTab
+          calculations={calculations}
+          customer={customer}
+          supportDevices={state.supportDevices}
+          monthlyServices={state.monthlyServices}
+          otherLaborData={state.otherLaborData}
+          setupServices={state.setupServices}
+          upfrontPayment={state.upfrontPayment}
+          onUpfrontPaymentChange={updateUpfrontPayment}
+          editMode={editMode}
+          quoteId={quoteId}
+        />
+      )}
       </div>
 
-      {/* Quote Summary - Mobile: Normal flow at bottom, Desktop: Sticky Sidebar */}
-      <div className={`w-full flex-shrink-0 order-2 transition-all duration-300 ${
-        quoteSummaryExpanded ? 'lg:w-1/2' : 'lg:w-80'
+      {/* Quote Summary - Hidden on Review tab, visible on others */}
+      <div className={`flex-shrink-0 order-2 transition-all duration-500 ease-in-out ${
+        currentStep === 3 
+          ? 'w-0 lg:translate-x-full opacity-0 pointer-events-none overflow-hidden' 
+          : quoteSummaryExpanded 
+            ? 'w-full lg:w-1/2 lg:translate-x-0 opacity-100' 
+            : 'w-full lg:w-80 lg:translate-x-0 opacity-100'
       }`}>
         <div className="lg:sticky lg:top-6">
           <PricingSummary 
             calculations={calculations} 
-            monthlyServices={monthlyServices}
+            monthlyServices={state.monthlyServices}
+            supportDevices={state.supportDevices}
+            setupServices={state.setupServices}
             onExpandToggle={setQuoteSummaryExpanded}
             isExpanded={quoteSummaryExpanded}
             maxHeight={maxContentHeight}
+            editMode={editMode}
+            savedQuoteTotals={editMode && initialQuote ? {
+              monthlyTotal: initialQuote.monthlyTotal,
+              originalMonthlyTotal: initialQuote.originalMonthlyTotal,
+              contractTotal: initialQuote.contractTotal,
+              setupCosts: initialQuote.setupCosts,
+              upfrontPayment: initialQuote.upfrontPayment,
+              discountType: initialQuote.discountType,
+              discountValue: initialQuote.discountValue,
+              discountedTotal: initialQuote.discountedTotal
+            } : undefined}
+            quoteId={quoteId}
           />
         </div>
       </div>

@@ -1,13 +1,11 @@
 'use client'
 
 import React, { useState } from 'react'
-import { Trash2 } from 'lucide-react'
+import { Trash2, ChevronDown, ChevronRight } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-
 interface SupportDevice {
   id: string
   name: string
-  category: 'servers' | 'users' | 'cloud' | 'infrastructure'
   isActive: boolean
   quantity: number
   skillLevel: 1 | 2 | 3
@@ -36,132 +34,35 @@ interface SupportDevice {
 interface SupportLaborSelectorProps {
   devices: SupportDevice[]
   onChange: (devices: SupportDevice[]) => void
+  customer?: any
+  setupServices?: any[]
 }
 
-const DEFAULT_DEVICES: SupportDevice[] = [
-  {
-    id: 'domain-controllers',
-    name: 'Domain Controllers',
-    category: 'servers',
-    isActive: false,
-    quantity: 0,
-    skillLevel: 2,
-    hours: {
-      predictable: { onsiteBusiness: 0.08, remoteBusiness: 0.05, onsiteAfterHours: 0, remoteAfterHours: 0 },
-      reactive: { onsiteBusiness: 0.24, remoteBusiness: 0.08, onsiteAfterHours: 0, remoteAfterHours: 0 },
-      emergency: { onsiteBusiness: 0.05, remoteBusiness: 0.05, onsiteAfterHours: 0.05, remoteAfterHours: 0 }
-    }
-  },
-  {
-    id: 'ms-intune',
-    name: 'MS InTune Management',
-    category: 'cloud',
-    isActive: false,
-    quantity: 0,
-    skillLevel: 2,
-    hours: {
-      predictable: { onsiteBusiness: 0.05, remoteBusiness: 0.05, onsiteAfterHours: 0, remoteAfterHours: 0 },
-      reactive: { onsiteBusiness: 0.22, remoteBusiness: 0.05, onsiteAfterHours: 0, remoteAfterHours: 0 },
-      emergency: { onsiteBusiness: 0.10, remoteBusiness: 0.05, onsiteAfterHours: 0, remoteAfterHours: 0 }
-    }
-  },
-  {
-    id: 'terminal-server',
-    name: 'Terminal Server',
-    category: 'servers',
-    isActive: false,
-    quantity: 0,
-    skillLevel: 2,
-    hours: {
-      predictable: { onsiteBusiness: 0.10, remoteBusiness: 0.05, onsiteAfterHours: 0, remoteAfterHours: 0 },
-      reactive: { onsiteBusiness: 0.22, remoteBusiness: 0.05, onsiteAfterHours: 0, remoteAfterHours: 0 },
-      emergency: { onsiteBusiness: 0.10, remoteBusiness: 0.05, onsiteAfterHours: 0, remoteAfterHours: 0 }
-    }
-  },
-  {
-    id: 'azure-server',
-    name: 'Azure Cloud Server',
-    category: 'cloud',
-    isActive: false,
-    quantity: 0,
-    skillLevel: 2,
-    hours: {
-      predictable: { onsiteBusiness: 0, remoteBusiness: 0.05, onsiteAfterHours: 0, remoteAfterHours: 0 },
-      reactive: { onsiteBusiness: 0, remoteBusiness: 0.10, onsiteAfterHours: 0, remoteAfterHours: 0 },
-      emergency: { onsiteBusiness: 0, remoteBusiness: 0.05, onsiteAfterHours: 0, remoteAfterHours: 0.05 }
-    }
-  },
-  {
-    id: 'app-server',
-    name: 'Application Server',
-    category: 'servers',
-    isActive: false,
-    quantity: 0,
-    skillLevel: 2,
-    hours: {
-      predictable: { onsiteBusiness: 0, remoteBusiness: 0.05, onsiteAfterHours: 0, remoteAfterHours: 0 },
-      reactive: { onsiteBusiness: 0, remoteBusiness: 0.15, onsiteAfterHours: 0, remoteAfterHours: 0 },
-      emergency: { onsiteBusiness: 0, remoteBusiness: 0.10, onsiteAfterHours: 0, remoteAfterHours: 0 }
-    }
-  },
-  {
-    id: 'co-managed-server',
-    name: 'Co-Managed Server',
-    category: 'servers',
-    isActive: false,
-    quantity: 0,
-    skillLevel: 1,
-    hours: {
-      predictable: { onsiteBusiness: 0.03, remoteBusiness: 0.10, onsiteAfterHours: 0, remoteAfterHours: 0.05 },
-      reactive: { onsiteBusiness: 0, remoteBusiness: 0, onsiteAfterHours: 0, remoteAfterHours: 0 },
-      emergency: { onsiteBusiness: 0, remoteBusiness: 0, onsiteAfterHours: 0, remoteAfterHours: 0 }
-    }
-  },
-  {
-    id: 'proactive-users',
-    name: 'Proactive Users',
-    category: 'users',
-    isActive: false,
-    quantity: 0,
-    skillLevel: 1,
-    hours: {
-      predictable: { onsiteBusiness: 0.05, remoteBusiness: 0.03, onsiteAfterHours: 0, remoteAfterHours: 0.01 },
-      reactive: { onsiteBusiness: 0.02, remoteBusiness: 0.06, onsiteAfterHours: 0, remoteAfterHours: 0 },
-      emergency: { onsiteBusiness: 0.05, remoteBusiness: 0.05, onsiteAfterHours: 0, remoteAfterHours: 0 }
-    }
-  },
-  {
-    id: 'essential-users',
-    name: 'Essential Users',
-    category: 'users',
-    isActive: false,
-    quantity: 0,
-    skillLevel: 1,
-    hours: {
-      predictable: { onsiteBusiness: 0, remoteBusiness: 0.10, onsiteAfterHours: 0, remoteAfterHours: 0.01 },
-      reactive: { onsiteBusiness: 0, remoteBusiness: 0.10, onsiteAfterHours: 0, remoteAfterHours: 0 },
-      emergency: { onsiteBusiness: 0, remoteBusiness: 0.10, onsiteAfterHours: 0, remoteAfterHours: 0 }
-    }
-  },
-  {
-    id: 'co-managed-users',
-    name: 'Co-Managed Users',
-    category: 'users',
-    isActive: false,
-    quantity: 0,
-    skillLevel: 1,
-    hours: {
-      predictable: { onsiteBusiness: 0.02, remoteBusiness: 0.03, onsiteAfterHours: 0, remoteAfterHours: 0.01 },
-      reactive: { onsiteBusiness: 0, remoteBusiness: 0, onsiteAfterHours: 0, remoteAfterHours: 0 },
-      emergency: { onsiteBusiness: 0, remoteBusiness: 0, onsiteAfterHours: 0, remoteAfterHours: 0 }
-    }
-  }
-]
+// Support device configuration is now handled in QuoteContext
 
-export function SupportLaborSelector({ devices, onChange }: SupportLaborSelectorProps) {
-  const workingDevices = devices && devices.length > 0 ? devices : DEFAULT_DEVICES
+export function SupportLaborSelector({ devices = [], onChange }: SupportLaborSelectorProps) {
+  // Auto-calculation and device initialization is now handled in QuoteContext
+  const [expandedDevices, setExpandedDevices] = useState<Set<string>>(new Set())
+  
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(amount)
+  }
+  
+  const toggleDeviceExpansion = (deviceId: string) => {
+    const newExpanded = new Set(expandedDevices)
+    if (newExpanded.has(deviceId)) {
+      newExpanded.delete(deviceId)
+    } else {
+      newExpanded.add(deviceId)
+    }
+    setExpandedDevices(newExpanded)
+  }
+
   const toggleDevice = (deviceId: string) => {
-    const updatedDevices = workingDevices.map(device =>
+    const updatedDevices = devices.map(device =>
       device.id === deviceId
         ? { ...device, isActive: !device.isActive }
         : device
@@ -170,16 +71,16 @@ export function SupportLaborSelector({ devices, onChange }: SupportLaborSelector
   }
 
   const updateDeviceQuantity = (deviceId: string, quantity: number) => {
-    const updatedDevices = workingDevices.map(device =>
+    const updatedDevices = devices.map(device =>
       device.id === deviceId
-        ? { ...device, quantity: Math.max(0, quantity) }
+        ? { ...device, quantity }
         : device
     )
     onChange(updatedDevices)
   }
 
   const updateDeviceSkillLevel = (deviceId: string, skillLevel: 1 | 2 | 3) => {
-    const updatedDevices = workingDevices.map(device =>
+    const updatedDevices = devices.map(device =>
       device.id === deviceId
         ? { ...device, skillLevel }
         : device
@@ -195,7 +96,7 @@ export function SupportLaborSelector({ devices, onChange }: SupportLaborSelector
     }
     const labels = {
       1: 'Level 1 (Junior)',
-      2: 'Level 2 (Intermediate)',
+      2: 'Level 2 (Intermediate)', 
       3: 'Level 3 (Senior)'
     }
     return (
@@ -205,39 +106,67 @@ export function SupportLaborSelector({ devices, onChange }: SupportLaborSelector
     )
   }
 
+  const calculateDeviceCost = (device: SupportDevice) => {
+    const costRates = { 1: 22, 2: 37, 3: 46 }
+    const priceRates = { 
+      1: { business: 155, afterHours: 155 },
+      2: { business: 185, afterHours: 275 },
+      3: { business: 275, afterHours: 375 }
+    }
+    
+    const calculateServiceTypeCost = (hours: any) => {
+      // Cost is always the same rate regardless of time
+      const cost = device.quantity * (
+        (hours.onsiteBusiness + hours.remoteBusiness + hours.onsiteAfterHours + hours.remoteAfterHours) * costRates[device.skillLevel]
+      )
+      
+      // Price varies by business vs after hours
+      const businessHoursPrice = device.quantity * (
+        (hours.onsiteBusiness + hours.remoteBusiness) * priceRates[device.skillLevel].business
+      )
+      const afterHoursPrice = device.quantity * (
+        (hours.onsiteAfterHours + hours.remoteAfterHours) * priceRates[device.skillLevel].afterHours
+      )
+      const price = businessHoursPrice + afterHoursPrice
+      
+      const totalHours = hours.onsiteBusiness + hours.remoteBusiness + hours.onsiteAfterHours + hours.remoteAfterHours
+      
+      return { cost, price, hours: totalHours }
+    }
 
-  const groupedDevices = {
-    servers: workingDevices.filter(d => d.category === 'servers'),
-    users: workingDevices.filter(d => d.category === 'users'),
-    cloud: workingDevices.filter(d => d.category === 'cloud'),
-    infrastructure: workingDevices.filter(d => d.category === 'infrastructure')
+    const predictable = calculateServiceTypeCost(device.hours.predictable)
+    const reactive = calculateServiceTypeCost(device.hours.reactive)
+    const emergency = calculateServiceTypeCost(device.hours.emergency)
+    
+    const totalHours = predictable.hours + reactive.hours + emergency.hours
+    const totalCost = predictable.cost + reactive.cost + emergency.cost
+    const totalPrice = predictable.price + reactive.price + emergency.price
+
+    return { 
+      cost: totalCost, 
+      price: totalPrice, 
+      totalHours,
+      breakdown: {
+        predictable: { hours: predictable.hours, cost: predictable.cost, price: predictable.price },
+        reactive: { hours: reactive.hours, cost: reactive.cost, price: reactive.price },
+        emergency: { hours: emergency.hours, cost: emergency.cost, price: emergency.price }
+      }
+    }
   }
 
-  const activeDevices = workingDevices.filter(device => device.isActive)
-
-  const calculateDeviceTotal = (device: SupportDevice) => {
-    const { hours } = device
-    return (
-      hours.predictable.onsiteBusiness + hours.predictable.remoteBusiness + 
-      hours.predictable.onsiteAfterHours + hours.predictable.remoteAfterHours +
-      hours.reactive.onsiteBusiness + hours.reactive.remoteBusiness + 
-      hours.reactive.onsiteAfterHours + hours.reactive.remoteAfterHours +
-      hours.emergency.onsiteBusiness + hours.emergency.remoteBusiness + 
-      hours.emergency.onsiteAfterHours + hours.emergency.remoteAfterHours
-    )
-  }
+  const activeDevices = devices.filter(device => device.isActive)
 
   return (
     <div className="space-y-6">
-      {/* Device Type Selection */}
+      {/* Device Selection */}
       <Card>
         <CardHeader>
-          <CardTitle>Available Support Device Types</CardTitle>
-          <p className="text-sm text-gray-600">Select the device types that require ongoing support</p>
+          <CardTitle>Support Devices</CardTitle>
+          <p className="text-sm text-gray-600">Select devices and infrastructure that require ongoing support</p>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {workingDevices.map((device) => (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {devices.map((device) => (
               <label key={device.id} className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-50 cursor-pointer">
                 <div className="relative">
                   <input
@@ -266,112 +195,178 @@ export function SupportLaborSelector({ devices, onChange }: SupportLaborSelector
         </CardContent>
       </Card>
 
-      {/* Selected Device Configuration */}
+      {/* Selected Devices Configuration */}
       {activeDevices.length > 0 && (
         <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-gray-900">Support Labor Configuration</h3>
+          <h3 className="text-lg font-semibold text-gray-900">Configure Selected Support Devices</h3>
           
-          {activeDevices.map((device) => (
-            <Card key={device.id}>
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <CardTitle className="text-base">{device.name}</CardTitle>
-                    {getSkillLevelBadge(device.skillLevel)}
-                  </div>
-                  <button
-                    onClick={() => toggleDevice(device.id)}
-                    className="text-red-600 hover:text-red-800 transition-colors p-1 cursor-pointer"
-                    title="Remove Device Type"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {/* Configuration Row */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Quantity
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={device.quantity}
-                      onChange={(e) => updateDeviceQuantity(device.id, parseInt(e.target.value) || 0)}
-                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Labor Level
-                    </label>
-                    <select
-                      value={device.skillLevel}
-                      onChange={(e) => updateDeviceSkillLevel(device.id, parseInt(e.target.value) as 1 | 2 | 3)}
-                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          {activeDevices.map((device) => {
+            const deviceCosts = calculateDeviceCost(device)
+            const isExpanded = expandedDevices.has(device.id)
+            return (
+              <Card key={device.id} className="border border-gray-200">
+                <CardContent className="p-6">
+                  {/* Main Info Row */}
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-4">
+                      <h3 className="text-lg font-medium text-gray-900">{device.name}</h3>
+                      {getSkillLevelBadge(device.skillLevel)}
+                    </div>
+                    <button
+                      onClick={() => toggleDevice(device.id)}
+                      className="text-red-600 hover:text-red-800 transition-colors p-1 cursor-pointer"
+                      title="Remove Device"
                     >
-                      <option value={1}>Level 1 - Junior</option>
-                      <option value={2}>Level 2 - Intermediate</option>
-                      <option value={3}>Level 3 - Senior</option>
-                    </select>
+                      <Trash2 size={16} />
+                    </button>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Hours per Device/Month
-                    </label>
-                    <div className="px-3 py-2 text-sm font-medium text-gray-900 bg-gray-50 rounded">
-                      {calculateDeviceTotal(device).toFixed(2)} hrs
+                  {/* Key Configuration - Always Visible */}
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4 p-4 bg-gray-50 rounded-lg">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Quantity
+                      </label>
+                      {(device.name === 'MS InTune Mgmt' || device.name === 'Proactive Users' || device.name === 'Co-Managed Users') ? (
+                        <span className="w-full px-3 py-2 text-sm text-gray-600 bg-gray-100 rounded border inline-block">
+                          {device.quantity}
+                        </span>
+                      ) : (
+                        <input
+                          type="number"
+                          min="0"
+                          value={device.quantity}
+                          onChange={(e) => updateDeviceQuantity(device.id, parseInt(e.target.value) || 0)}
+                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        />
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Labor Level
+                      </label>
+                      <select
+                        value={device.skillLevel}
+                        onChange={(e) => updateDeviceSkillLevel(device.id, parseInt(e.target.value) as 1 | 2 | 3)}
+                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value={1}>Level 1 - Junior</option>
+                        <option value={2}>Level 2 - Intermediate</option>
+                        <option value={3}>Level 3 - Senior</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Hours/Month
+                      </label>
+                      <div className="px-3 py-2 text-sm font-medium text-gray-900 bg-white rounded border">
+                        {deviceCosts.totalHours.toFixed(2)} hrs
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Monthly Price
+                      </label>
+                      <div className="px-3 py-2 text-sm font-semibold text-gray-900 bg-white rounded border">
+                        {formatCurrency(deviceCosts.price)}
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Hours Breakdown */}
-                <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-                  <h5 className="text-sm font-medium text-gray-700 mb-2">Monthly Hours Breakdown</h5>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-                    <div>
-                      <div className="font-medium text-gray-600 mb-1">Predictable Maintenance</div>
-                      <div className="text-gray-500">
-                        Onsite Business: {device.hours.predictable.onsiteBusiness}h<br/>
-                        Remote Business: {device.hours.predictable.remoteBusiness}h<br/>
-                        Onsite After Hrs: {device.hours.predictable.onsiteAfterHours}h<br/>
-                        Remote After Hrs: {device.hours.predictable.remoteAfterHours}h
+                  {/* Expandable Details */}
+                  <div className="border-t pt-4">
+                    <button
+                      onClick={() => toggleDeviceExpansion(device.id)}
+                      className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
+                    >
+                      {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                      View detailed breakdown
+                    </button>
+
+                    {isExpanded && (
+                      <div className="mt-4 space-y-4">
+                        {/* Hours Breakdown */}
+                        <div className="p-4 bg-gray-50 rounded-lg">
+                          <h5 className="text-sm font-medium text-gray-900 mb-3">Hours Breakdown (per device)</h5>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                            <div className="space-y-2">
+                              <div className="font-medium text-gray-700">Predictable Maintenance</div>
+                              <div className="space-y-1 text-xs text-gray-600">
+                                <div>Onsite Business: {device.hours.predictable.onsiteBusiness}</div>
+                                <div>Remote Business: {device.hours.predictable.remoteBusiness}</div>
+                                <div>Onsite After Hours: {device.hours.predictable.onsiteAfterHours}</div>
+                                <div>Remote After Hours: {device.hours.predictable.remoteAfterHours}</div>
+                              </div>
+                            </div>
+                            <div className="space-y-2">
+                              <div className="font-medium text-gray-700">Reactive Maintenance</div>
+                              <div className="space-y-1 text-xs text-gray-600">
+                                <div>Onsite Business: {device.hours.reactive.onsiteBusiness}</div>
+                                <div>Remote Business: {device.hours.reactive.remoteBusiness}</div>
+                                <div>Onsite After Hours: {device.hours.reactive.onsiteAfterHours}</div>
+                                <div>Remote After Hours: {device.hours.reactive.remoteAfterHours}</div>
+                              </div>
+                            </div>
+                            <div className="space-y-2">
+                              <div className="font-medium text-gray-700">Emergency Service</div>
+                              <div className="space-y-1 text-xs text-gray-600">
+                                <div>Onsite Business: {device.hours.emergency.onsiteBusiness}</div>
+                                <div>Remote Business: {device.hours.emergency.remoteBusiness}</div>
+                                <div>Onsite After Hours: {device.hours.emergency.onsiteAfterHours}</div>
+                                <div>Remote After Hours: {device.hours.emergency.remoteAfterHours}</div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Cost Breakdown */}
+                        <div className="p-4 bg-gray-50 rounded-lg">
+                          <h5 className="text-sm font-medium text-gray-900 mb-3">Cost & Price Breakdown (Total for {device.quantity} devices)</h5>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                            <div className="space-y-2">
+                              <div className="font-medium text-gray-700">Predictable ({deviceCosts.breakdown.predictable.hours.toFixed(2)} hrs)</div>
+                              <div className="space-y-1 text-xs text-gray-600">
+                                <div>Cost: {formatCurrency(deviceCosts.breakdown.predictable.cost)}</div>
+                                <div>Price: {formatCurrency(deviceCosts.breakdown.predictable.price)}</div>
+                              </div>
+                            </div>
+                            <div className="space-y-2">
+                              <div className="font-medium text-gray-700">Reactive ({deviceCosts.breakdown.reactive.hours.toFixed(2)} hrs)</div>
+                              <div className="space-y-1 text-xs text-gray-600">
+                                <div>Cost: {formatCurrency(deviceCosts.breakdown.reactive.cost)}</div>
+                                <div>Price: {formatCurrency(deviceCosts.breakdown.reactive.price)}</div>
+                              </div>
+                            </div>
+                            <div className="space-y-2">
+                              <div className="font-medium text-gray-700">Emergency ({deviceCosts.breakdown.emergency.hours.toFixed(2)} hrs)</div>
+                              <div className="space-y-1 text-xs text-gray-600">
+                                <div>Cost: {formatCurrency(deviceCosts.breakdown.emergency.cost)}</div>
+                                <div>Price: {formatCurrency(deviceCosts.breakdown.emergency.price)}</div>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div className="grid grid-cols-2 gap-4 mt-4 pt-3 border-t border-gray-200">
+                            <div>
+                              <div className="text-xs text-gray-600">Total Monthly Cost</div>
+                              <div className="font-medium text-gray-900">{formatCurrency(deviceCosts.cost)}</div>
+                            </div>
+                            <div>
+                              <div className="text-xs text-gray-600">Total Monthly Price</div>
+                              <div className="font-medium text-gray-900">{formatCurrency(deviceCosts.price)}</div>
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                    <div>
-                      <div className="font-medium text-gray-600 mb-1">Reactive Maintenance</div>
-                      <div className="text-gray-500">
-                        Onsite Business: {device.hours.reactive.onsiteBusiness}h<br/>
-                        Remote Business: {device.hours.reactive.remoteBusiness}h<br/>
-                        Onsite After Hrs: {device.hours.reactive.onsiteAfterHours}h<br/>
-                        Remote After Hrs: {device.hours.reactive.remoteAfterHours}h
-                      </div>
-                    </div>
-                    <div>
-                      <div className="font-medium text-gray-600 mb-1">Emergency Service</div>
-                      <div className="text-gray-500">
-                        Onsite Business: {device.hours.emergency.onsiteBusiness}h<br/>
-                        Remote Business: {device.hours.emergency.remoteBusiness}h<br/>
-                        Onsite After Hrs: {device.hours.emergency.onsiteAfterHours}h<br/>
-                        Remote After Hrs: {device.hours.emergency.remoteAfterHours}h
-                      </div>
-                    </div>
+                    )}
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
-
-      {/* Initial State */}
-      {activeDevices.length === 0 && (
-        <div className="text-center py-8 text-gray-500">
-          <p>Select device types above to configure support labor hours and costs.</p>
+                </CardContent>
+              </Card>
+            )
+          })}
         </div>
       )}
     </div>

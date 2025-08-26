@@ -46,18 +46,18 @@ export function useLoading() {
 export function useApiCall() {
   const { startLoading, stopLoading } = useLoading()
   
-  const apiCall = useCallback(async <T>(
-    fetchFn: () => Promise<T>, 
-    loadingMessage?: string
-  ): Promise<T> => {
-    try {
-      startLoading(loadingMessage)
-      const result = await fetchFn()
-      return result
-    } finally {
-      stopLoading()
-    }
-  }, [startLoading, stopLoading])
+  const apiCall = useCallback(
+    async (fetchFn: () => Promise<any>, loadingMessage?: string) => {
+      try {
+        startLoading(loadingMessage)
+        const result = await fetchFn()
+        return result
+      } finally {
+        stopLoading()
+      }
+    },
+    [startLoading, stopLoading]
+  )
   
   return { apiCall }
 }

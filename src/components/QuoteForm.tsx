@@ -16,7 +16,19 @@ export function QuoteForm() {
     contractMonths: 36,
     contractType: 'Managed Services',
     users: { full: 0, emailOnly: 0 },
-    infrastructure: { workstations: 0, servers: 0, printers: 0, phoneExtensions: 0 }
+    infrastructure: { 
+      workstations: 0, 
+      servers: 0, 
+      printers: 0, 
+      phoneExtensions: 0,
+      wifiAccessPoints: 0,
+      firewalls: 0,
+      switches: 0,
+      ups: 0,
+      nas: 0,
+      managedMobileDevices: 0,
+      domainsUsedForEmail: 0
+    }
   })
   const [setupServices, setSetupServices] = useState<SetupService[]>(DEFAULT_SETUP_SERVICES)
   const [calculations, setCalculations] = useState<QuoteCalculation>()

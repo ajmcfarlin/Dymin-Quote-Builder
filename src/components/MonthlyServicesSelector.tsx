@@ -1,41 +1,23 @@
 'use client'
 
-import React from 'react'
-import { FixedCostTool, VariableCostTool, MonthlyServicesData } from '@/types/monthlyServices'
+import React, { useState } from 'react'
+import { Info, Plus, Trash2 } from 'lucide-react'
+import { MonthlyServicesData, VariableCostTool } from '@/types/monthlyServices'
+import { CustomerInfo } from '@/types/quote'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 interface MonthlyServicesSelectorProps {
   monthlyServices: MonthlyServicesData
+  customer: CustomerInfo
   onChange: (services: MonthlyServicesData) => void
 }
 
-export function MonthlyServicesSelector({ monthlyServices, onChange }: MonthlyServicesSelectorProps) {
-  const toggleFixedTool = (toolId: string) => {
-    const updatedTools = monthlyServices.fixedCostTools.map(tool =>
-      tool.id === toolId ? { ...tool, isActive: !tool.isActive } : tool
-    )
-    onChange({ ...monthlyServices, fixedCostTools: updatedTools })
-  }
-
-  const toggleVariableTool = (toolId: string) => {
-    const updatedTools = monthlyServices.variableCostTools.map(tool =>
-      tool.id === toolId ? { ...tool, isActive: !tool.isActive } : tool
-    )
-    onChange({ ...monthlyServices, variableCostTools: updatedTools })
-  }
-
-  const updateVariableToolUnits = (toolId: string, units: number) => {
-    const updatedTools = monthlyServices.variableCostTools.map(tool =>
-      tool.id === toolId ? { 
-        ...tool, 
-        nodesUnitsSupported: units,
-        // TODO: Recalculate extended costs/prices based on formulas
-        extendedCost: tool.costPerNodeUnit ? units * tool.costPerNodeUnit : (tool.costPerCustomer || 0),
-        extendedPrice: tool.pricePerNodeUnit ? units * tool.pricePerNodeUnit : 0
-      } : tool
-    )
-    onChange({ ...monthlyServices, variableCostTools: updatedTools })
-  }
+export function MonthlyServicesSelector({ monthlyServices, customer, onChange }: MonthlyServicesSelectorProps) {
+  const [showAddForm, setShowAddForm] = useState(false)
+  const [newItemName, setNewItemName] = useState('')
+  const [newItemCost, setNewItemCost] = useState('')
+  const [newItemPrice, setNewItemPrice] = useState('')
+  const [newItemQuantity, setNewItemQuantity] = useState('1')
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -48,200 +30,331 @@ export function MonthlyServicesSelector({ monthlyServices, onChange }: MonthlySe
     return `${percent.toFixed(1)}%`
   }
 
-  const activeFixedTools = monthlyServices.fixedCostTools.filter(tool => tool.isActive)
-  const activeVariableTools = monthlyServices.variableCostTools.filter(tool => tool.isActive)
+  // List of optional tools that can be manually edited
+  const optionalToolIds = ['4181', '3410', '3522', '3415', '4164', '3914', '3439', '3440', '3438', '3445', '3446']
+  
+  // Check if a tool is optional (manually editable)
+  const isOptionalTool = (toolId: string): boolean => {
+    return optionalToolIds.includes(toolId) || toolId.startsWith('custom_')
+  }
 
-  const totalFixedCost = activeFixedTools.reduce((sum, tool) => sum + tool.extendedPrice, 0)
-  const totalVariableCost = activeVariableTools.reduce((sum, tool) => sum + tool.extendedPrice, 0)
+  // Check if a tool is custom (can be deleted)
+  const isCustomTool = (toolId: string): boolean => {
+    return toolId.startsWith('custom_')
+  }
+
+  // Get tooltip text explaining how quantity is calculated
+  const getQuantityTooltip = (toolId: string): string => {
+    switch (toolId) {
+      case '3433': return 'Calculated from workstation count in customer info'
+      case '3427': return 'Calculated from server count in customer info'
+      case '3425': return 'Calculated from wifi access point count in customer info'
+      case '3421': return 'Calculated from firewall count in customer info'
+      case '3426': return 'Calculated from printer count in customer info'
+      case '3423': return 'Calculated from network switch count in customer info'
+      case '3428': return 'Calculated from UPS count in customer info'
+      case '3414': return 'Calculated from total workstations and servers'
+      case '3516': return 'Calculated from total full and email-only users'
+      case '3464': return 'Calculated from server count in customer info'
+      case '3506': return 'Calculated from total workstations and servers'
+      case '3586': return 'Calculated from total full and email-only users'
+      case '3420': return 'Calculated from NAS device count in customer info'
+      case '3810': return 'Calculated from managed mobile device count'
+      case '3418': return 'Always set to 1 per environment'
+      case '3413': return 'Calculated from domains used for email count'
+      case '3412': return 'Calculated from domains used for email count'
+      case '4181': return 'Manually entered - set quantity as needed'
+      case '3410': return 'Manually entered - set quantity as needed'
+      case '3522': return 'Manually entered - set quantity as needed'
+      case '3415': return 'Manually entered - set quantity as needed'
+      case '4164': return 'Manually entered - set quantity as needed'
+      case '3914': return 'Manually entered - set quantity as needed'
+      case '3439': return 'Manually entered - set quantity as needed'
+      case '3440': return 'Manually entered - set quantity as needed'
+      case '3438': return 'Manually entered - set quantity as needed'
+      case '3445': return 'Manually entered - set quantity as needed'
+      case '3446': return 'Manually entered - set quantity as needed'
+      default: 
+        if (toolId.startsWith('custom_')) {
+          return 'Custom item: quantity can be manually set as needed'
+        }
+        return 'Quantity calculation not defined'
+    }
+  }
+
+  // Quantity calculation is now handled in QuoteContext
+
+  // Auto-calculation is now handled in QuoteContext, so this useEffect is removed
+
+  // Variable cost tools handlers
+
+  const updateVariableTool = (toolId: string, updates: Partial<VariableCostTool>) => {
+    const updatedTools = monthlyServices.variableCostTools.map(tool => {
+      if (tool.id === toolId) {
+        const updatedTool = { ...tool, ...updates }
+        
+        // Recalculate extended costs and prices when quantity changes
+        if ('nodesUnitsSupported' in updates) {
+          if (updatedTool.costPerNodeUnit) {
+            updatedTool.extendedCost = updatedTool.nodesUnitsSupported * updatedTool.costPerNodeUnit
+            if (updatedTool.pricePerNodeUnit) {
+              updatedTool.extendedPrice = updatedTool.nodesUnitsSupported * updatedTool.pricePerNodeUnit
+            }
+          } else if (updatedTool.costPerCustomer) {
+            updatedTool.extendedCost = updatedTool.costPerCustomer
+            if (updatedTool.pricePerNodeUnit) {
+              updatedTool.extendedPrice = updatedTool.pricePerNodeUnit
+            }
+          }
+          
+          // If quantity is 0, extended costs and prices should be 0
+          if (updatedTool.nodesUnitsSupported === 0) {
+            updatedTool.extendedCost = 0
+            updatedTool.extendedPrice = 0
+          }
+          
+          // Calculate margin
+          if (updatedTool.extendedPrice > 0) {
+            updatedTool.margin = ((updatedTool.extendedPrice - updatedTool.extendedCost) / updatedTool.extendedPrice) * 100
+          } else {
+            updatedTool.margin = 0
+          }
+        }
+        
+        return updatedTool
+      }
+      return tool
+    })
+    onChange({ ...monthlyServices, variableCostTools: updatedTools })
+  }
+
+  // Add custom item
+  const addCustomItem = () => {
+    if (!newItemName.trim() || !newItemCost || !newItemPrice || !newItemQuantity) return
+
+    const customId = `custom_${Date.now()}`
+    const costPerUnit = parseFloat(newItemCost)
+    const pricePerUnit = parseFloat(newItemPrice)
+    const quantity = parseInt(newItemQuantity) || 0
+    const extendedCost = quantity * costPerUnit
+    const extendedPrice = quantity * pricePerUnit
+    const margin = extendedPrice > 0 ? ((extendedPrice - extendedCost) / extendedPrice) * 100 : 0
+
+    const newTool: VariableCostTool = {
+      id: customId,
+      name: newItemName.trim(),
+      isActive: true,
+      nodesUnitsSupported: quantity,
+      costPerNodeUnit: costPerUnit,
+      extendedCost: extendedCost,
+      pricePerNodeUnit: pricePerUnit,
+      extendedPrice: extendedPrice,
+      margin: margin
+    }
+
+    const updatedTools = [...monthlyServices.variableCostTools, newTool]
+    onChange({ ...monthlyServices, variableCostTools: updatedTools })
+
+    // Reset form
+    setNewItemName('')
+    setNewItemCost('')
+    setNewItemPrice('')
+    setNewItemQuantity('1')
+    setShowAddForm(false)
+  }
+
+  // Remove custom item
+  const removeCustomItem = (toolId: string) => {
+    const updatedTools = monthlyServices.variableCostTools.filter(tool => tool.id !== toolId)
+    onChange({ ...monthlyServices, variableCostTools: updatedTools })
+  }
+
+  // All tools are now shown by default (all are isActive: true)
+  const activeVariableTools = monthlyServices.variableCostTools
 
   return (
     <div className="space-y-6">
-      {/* Fixed Cost Tools Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Fixed Cost Tools</CardTitle>
-          <p className="text-sm text-gray-600">Service management tools with amortized costs across customers</p>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-6">
-            {monthlyServices.fixedCostTools.map((tool) => (
-              <label key={tool.id} className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-50 cursor-pointer">
-                <div className="relative">
-                  <input
-                    type="checkbox"
-                    checked={tool.isActive}
-                    onChange={() => toggleFixedTool(tool.id)}
-                    className="sr-only"
-                  />
-                  <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
-                    tool.isActive 
-                      ? 'border-gray-300 hover:border-gray-400' 
-                      : 'bg-white border-gray-300 hover:border-gray-400'
-                  }`}
-                  style={tool.isActive ? { backgroundColor: '#15bef0', borderColor: '#15bef0' } : {}}>
-                    {tool.isActive && (
-                      <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                    )}
-                  </div>
-                </div>
-                <span className="text-sm font-medium text-gray-900">{tool.name}</span>
-              </label>
-            ))}
-          </div>
 
-          {activeFixedTools.length > 0 && (
-            <div className="border-t pt-4">
-              <h4 className="font-medium text-gray-900 mb-3">Active Fixed Cost Tools</h4>
-              <div className="bg-gray-50 rounded-lg p-4">
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-gray-900">{formatCurrency(totalFixedCost)}</div>
-                  <div className="text-sm text-gray-600">Total Monthly Fixed Cost</div>
-                  <div className="text-xs text-gray-500 mt-1">
-                    {activeFixedTools.length} tool{activeFixedTools.length !== 1 ? 's' : ''} selected
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
 
-      {/* Variable Cost Tools Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Variable Cost Tools</CardTitle>
-          <p className="text-sm text-gray-600">Per-device, per-user, or per-customer pricing</p>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-6">
-            {monthlyServices.variableCostTools.map((tool) => (
-              <label key={tool.id} className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-50 cursor-pointer">
-                <div className="relative">
-                  <input
-                    type="checkbox"
-                    checked={tool.isActive}
-                    onChange={() => toggleVariableTool(tool.id)}
-                    className="sr-only"
-                  />
-                  <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
-                    tool.isActive 
-                      ? 'border-gray-300 hover:border-gray-400' 
-                      : 'bg-white border-gray-300 hover:border-gray-400'
-                  }`}
-                  style={tool.isActive ? { backgroundColor: '#15bef0', borderColor: '#15bef0' } : {}}>
-                    {tool.isActive && (
-                      <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                    )}
-                  </div>
-                </div>
-                <span className="text-sm font-medium text-gray-900">{tool.name}</span>
-              </label>
-            ))}
-          </div>
-
-          {activeVariableTools.length > 0 && (
-            <div className="border-t pt-4">
-              <h4 className="font-medium text-gray-900 mb-4">Active Variable Cost Tools</h4>
-              
-              <div className="space-y-4 mb-6">
-                {activeVariableTools.map((tool) => (
-                  <Card key={tool.id} className="border border-gray-200">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-base">{tool.name}</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Units/Nodes
-                          </label>
-                          <input
-                            type="number"
-                            min="0"
-                            value={tool.nodesUnitsSupported}
-                            onChange={(e) => updateVariableToolUnits(tool.id, parseInt(e.target.value) || 0)}
-                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-medium text-gray-600 mb-1">
-                            Cost/Unit
-                          </label>
-                          <div className="px-3 py-2 text-sm text-gray-700 bg-gray-50 rounded">
-                            {formatCurrency(tool.costPerNodeUnit || tool.costPerCustomer || 0)}
+      {/* Variable Cost Tools Configuration */}
+      {activeVariableTools.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Variable Cost Tools Configuration</CardTitle>
+            <p className="text-sm text-gray-600">Configure quantities and pricing for monthly tools and licensing</p>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="text-left py-2 px-2 font-medium text-gray-700">Tool</th>
+                    <th className="text-center py-2 px-2 font-medium text-gray-700">Units</th>
+                    <th className="text-center py-2 px-2 font-medium text-gray-700">Cost/Unit</th>
+                    <th className="text-center py-2 px-2 font-medium text-gray-700">Extended Cost</th>
+                    <th className="text-center py-2 px-2 font-medium text-gray-700">Price/Unit</th>
+                    <th className="text-center py-2 px-2 font-medium text-gray-700">Extended Price</th>
+                    <th className="text-center py-2 px-2 font-medium text-gray-700">Margin %</th>
+                    <th className="text-center py-2 px-2 font-medium text-gray-700 w-10"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {activeVariableTools.map((tool, index) => {
+                    const isOptional = isOptionalTool(tool.id)
+                    return (
+                      <tr key={tool.id} className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
+                        <td className="py-2 px-2 font-medium">
+                          <div className="flex items-center gap-2">
+                            <span>{tool.name}</span>
+                            <div className="relative group">
+                              <Info size={14} className="text-gray-400 hover:text-gray-600 cursor-help" />
+                              <div className="absolute bottom-full left-0 transform mb-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10 min-w-max">
+                                {getQuantityTooltip(tool.id)}
+                                <div className="absolute top-full left-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+                              </div>
+                            </div>
                           </div>
+                        </td>
+                        <td className="py-2 px-2 text-center">
+                          {isOptional ? (
+                            <input
+                              type="number"
+                              min="0"
+                              value={tool.nodesUnitsSupported}
+                              onChange={(e) => updateVariableTool(tool.id, { nodesUnitsSupported: parseInt(e.target.value) || 0 })}
+                              className="w-16 px-2 py-1 text-center text-sm border border-gray-300 rounded"
+                            />
+                          ) : (
+                            <span className="w-16 px-2 py-1 text-center text-sm text-gray-600 bg-gray-100 rounded border inline-block">
+                              {tool.nodesUnitsSupported || 0}
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-2 px-2 text-center">
+                          {tool.costPerNodeUnit ? formatCurrency(tool.costPerNodeUnit) : 
+                           tool.costPerCustomer ? formatCurrency(tool.costPerCustomer) : '-'}
+                        </td>
+                        <td className="py-2 px-2 text-center">{formatCurrency(tool.extendedCost)}</td>
+                        <td className="py-2 px-2 text-center">
+                          {tool.pricePerNodeUnit ? formatCurrency(tool.pricePerNodeUnit) : '-'}
+                        </td>
+                        <td className="py-2 px-2 text-center font-medium">{formatCurrency(tool.extendedPrice)}</td>
+                        <td className="py-2 px-2 text-center">{formatPercent(tool.margin)}</td>
+                        <td className="py-2 px-2 text-center">
+                          {isCustomTool(tool.id) && (
+                            <button
+                              onClick={() => removeCustomItem(tool.id)}
+                              className="text-red-500 hover:text-red-700 transition-colors"
+                              title="Remove custom item"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                  
+                  {/* Add Custom Item Form Row */}
+                  {showAddForm && (
+                    <tr className="bg-blue-50 border-t-2 border-blue-200">
+                      <td className="py-2 px-2">
+                        <input
+                          type="text"
+                          placeholder="Custom tool name"
+                          value={newItemName}
+                          onChange={(e) => setNewItemName(e.target.value)}
+                          className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+                        />
+                      </td>
+                      <td className="py-2 px-2 text-center">
+                        <input
+                          type="number"
+                          min="0"
+                          value={newItemQuantity}
+                          onChange={(e) => setNewItemQuantity(e.target.value)}
+                          className="w-16 px-2 py-1 text-center text-sm border border-gray-300 rounded"
+                          placeholder="1"
+                        />
+                      </td>
+                      <td className="py-2 px-2 text-center">
+                        <input
+                          type="number"
+                          placeholder="0.00"
+                          step="0.01"
+                          min="0"
+                          value={newItemCost}
+                          onChange={(e) => setNewItemCost(e.target.value)}
+                          className="w-20 px-2 py-1 text-center text-sm border border-gray-300 rounded"
+                        />
+                      </td>
+                      <td className="py-2 px-2 text-center text-gray-500">
+                        {formatCurrency((parseInt(newItemQuantity) || 0) * (parseFloat(newItemCost) || 0))}
+                      </td>
+                      <td className="py-2 px-2 text-center">
+                        <input
+                          type="number"
+                          placeholder="0.00"
+                          step="0.01"
+                          min="0"
+                          value={newItemPrice}
+                          onChange={(e) => setNewItemPrice(e.target.value)}
+                          className="w-20 px-2 py-1 text-center text-sm border border-gray-300 rounded"
+                        />
+                      </td>
+                      <td className="py-2 px-2 text-center text-gray-500">
+                        {formatCurrency((parseInt(newItemQuantity) || 0) * (parseFloat(newItemPrice) || 0))}
+                      </td>
+                      <td className="py-2 px-2 text-center text-gray-500">
+                        {(() => {
+                          const extendedPrice = (parseInt(newItemQuantity) || 0) * (parseFloat(newItemPrice) || 0)
+                          const extendedCost = (parseInt(newItemQuantity) || 0) * (parseFloat(newItemCost) || 0)
+                          const margin = extendedPrice > 0 ? ((extendedPrice - extendedCost) / extendedPrice) * 100 : 0
+                          return formatPercent(margin)
+                        })()}
+                      </td>
+                      <td className="py-2 px-2 text-center">
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={addCustomItem}
+                            disabled={!newItemName.trim() || !newItemCost || !newItemPrice || !newItemQuantity}
+                            className="text-green-600 hover:text-green-800 disabled:text-gray-400 transition-colors"
+                            title="Add custom item"
+                          >
+                            <Plus size={16} />
+                          </button>
+                          <button
+                            onClick={() => {
+                              setShowAddForm(false)
+                              setNewItemName('')
+                              setNewItemCost('')
+                              setNewItemPrice('')
+                              setNewItemQuantity('1')
+                            }}
+                            className="text-gray-500 hover:text-gray-700 transition-colors"
+                            title="Cancel"
+                          >
+                            <Trash2 size={16} />
+                          </button>
                         </div>
-
-                        <div>
-                          <label className="block text-sm font-medium text-gray-600 mb-1">
-                            Price/Unit
-                          </label>
-                          <div className="px-3 py-2 text-sm text-gray-900 bg-gray-50 rounded">
-                            {formatCurrency(tool.pricePerNodeUnit || 0)}
-                          </div>
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-medium text-gray-600 mb-1">
-                            Total Cost
-                          </label>
-                          <div className="px-3 py-2 text-sm text-gray-700 bg-gray-50 rounded">
-                            {formatCurrency(tool.extendedCost)}
-                          </div>
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-medium text-gray-600 mb-1">
-                            Total Price
-                          </label>
-                          <div className="px-3 py-2 text-sm font-semibold text-gray-900 bg-gray-100 rounded border">
-                            {formatCurrency(tool.extendedPrice)}
-                          </div>
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-medium text-gray-600 mb-1">
-                            Margin
-                          </label>
-                          <div className="px-3 py-2 text-sm text-gray-700 bg-gray-50 rounded">
-                            {formatPercent(tool.margin)}
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-
-              <div className="bg-gray-50 rounded-lg p-4">
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-gray-900">{formatCurrency(totalVariableCost)}</div>
-                  <div className="text-sm text-gray-600">Total Monthly Variable Cost</div>
-                  <div className="text-xs text-gray-500 mt-1">
-                    {activeVariableTools.length} tool{activeVariableTools.length !== 1 ? 's' : ''} configured
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Total Summary */}
-      {(activeFixedTools.length > 0 || activeVariableTools.length > 0) && (
-        <Card className="border-2 border-blue-200 bg-blue-50">
-          <CardContent className="p-6">
-            <div className="text-center">
-              <div className="text-3xl font-bold text-blue-900">{formatCurrency(totalFixedCost + totalVariableCost)}</div>
-              <div className="text-lg text-blue-700">Total Monthly Tools & Licensing</div>
-              <div className="text-sm text-blue-600 mt-2">
-                Fixed: {formatCurrency(totalFixedCost)} + Variable: {formatCurrency(totalVariableCost)}
-              </div>
+                      </td>
+                    </tr>
+                  )}
+                  
+                  {/* Always show Add Custom Item button */}
+                  <tr className="border-t-2 border-gray-200">
+                    <td colSpan={8} className="py-3 text-center">
+                      <button
+                        onClick={() => setShowAddForm(true)}
+                        className="flex items-center justify-center gap-2 mx-auto px-4 py-2 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-50 rounded-lg transition-colors"
+                      >
+                        <Plus size={16} />
+                        Add Custom Item
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </CardContent>
         </Card>

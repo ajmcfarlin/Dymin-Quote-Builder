@@ -16,22 +16,74 @@ datasource db {
 
 model User {
   id        String   @id @default(cuid())
-  email     String   @unique
+  username  String   @unique
+  email     String?  // Optional for now
   name      String
   password  String
+  role      String   @default("sales") // "admin", "sales"
+  isActive  Boolean  @default(true)
   quotes    Quote[]
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Quote {
-  id           String   @id @default(cuid())
-  userId       String
-  user         User     @relation(fields: [userId], references: [id])
-  customerName String
-  quoteData    Json
-  totalCost    Float
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id])
+  
+  // Quote identification
+  quoteNumber   String?   @unique // Auto-generated quote number
+  version       Int       @default(1) // For quote versioning
+  
+  // Customer information
+  customerName  String
+  customerEmail String?
+  customerAddress String?
+  customerRegion  String?
+  
+  // Contract details
+  contractType  String?   // 'Managed Services', 'Co-Managed Services'
+  contractMonths Int      @default(36)
+  
+  // Quote data (comprehensive JSON structure)
+  customerData  Json      // Full CustomerInfo object
+  setupServices Json      // Array of SetupService objects
+  monthlyServices Json    // MonthlyServicesData object
+  supportDevices Json     // Array of support device configurations
+  otherLaborData Json     // OtherLaborData object
+  
+  // Financial summary
+  monthlyTotal        Float   @default(0) // This will be the final amount (discounted if applicable)
+  originalMonthlyTotal Float?            // Original pre-discount amount (for reference)
+  setupCosts          Float   @default(0)
+  upfrontPayment      Float   @default(0)
+  contractTotal       Float   @default(0)
+  
+  // Discount information
+  discountType    String? // 'none', 'percentage', 'raw_dollar', 'margin_override', 'per_user', 'override'
+  discountValue   Float?  @default(0)
+  discountedTotal Float?  @default(0) // Deprecated - keeping for backwards compatibility
+  
+  // Margins and analysis (for internal use)
+  estimatedCost   Float?  @default(0)
+  profitMargin    Float?  @default(0)
+  
+  // External integrations
+  haloPsaQuoteId  String? // Reference to HaloPSA quote if generated
+  
+  // Metadata
+  notes           String? // Internal notes
+  clientNotes     String? // Notes visible to client
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([userId])
+  @@index([customerName])
+  @@index([createdAt])
+  @@index([userId, createdAt]) // Compound index for user's quotes ordered by date
+  @@index([customerName, createdAt]) // For search with date ordering
 }
 
 model Configuration {
@@ -167,4 +219,34 @@ model ServiceHoursSyncLog {
   errorMessage    String?
   syncData        Json?    // Store summary data
   syncedAt        DateTime @default(now())
+}
+
+// Support Labor Configuration Models
+model SupportDevice {
+  id                String            @id @default(cuid())
+  deviceId          String            @unique  // 'domain-controllers', 'ms-intune-mgmt', etc.
+  name              String            // 'Domain Controllers', 'MS InTune Mgmt', etc.
+  defaultSkillLevel Int               @default(2) // 1, 2, or 3
+  isActive          Boolean           @default(true)
+  
+  // Predictable maintenance hours
+  predictableOnsiteBusiness     Float @default(0)
+  predictableRemoteBusiness     Float @default(0)
+  predictableOnsiteAfterHours   Float @default(0)
+  predictableRemoteAfterHours   Float @default(0)
+  
+  // Reactive maintenance hours  
+  reactiveOnsiteBusiness        Float @default(0)
+  reactiveRemoteBusiness        Float @default(0)
+  reactiveOnsiteAfterHours      Float @default(0)
+  reactiveRemoteAfterHours      Float @default(0)
+  
+  // Emergency service hours
+  emergencyOnsiteBusiness       Float @default(0)
+  emergencyRemoteBusiness       Float @default(0)
+  emergencyOnsiteAfterHours     Float @default(0)
+  emergencyRemoteAfterHours     Float @default(0)
+  
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
 }

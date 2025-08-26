@@ -4,9 +4,12 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "prisma generate && next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "db:seed": "npx tsx prisma/seed.ts",
+    "db:migrate": "npx prisma migrate dev",
+    "db:reset": "npx prisma migrate reset && npm run db:seed"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.0",
@@ -17,6 +20,7 @@
     "lucide-react": "^0.536.0",
     "next": "15.4.4",
     "next-auth": "^4.24.11",
+    "next-rate-limit": "^0.0.3",
     "prisma": "^6.12.0",
     "react": "19.1.0",
     "react-dom": "19.1.0",
@@ -33,6 +37,7 @@
     "eslint": "^9",
     "eslint-config-next": "15.4.4",
     "tailwindcss": "^4",
+    "tsx": "^4.19.2",
     "typescript": "^5"
   }
 }

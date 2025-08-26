@@ -74,7 +74,7 @@ export function HaloPSASimpleTemplates() {
         // Look for template/preset data in all tickets
         const templateData = allTickets.slice(0, 10).map((ticket: any) => {
           // Search for template-related fields in the ticket
-          const templateFields = []
+          const templateFields: { key: string; value: any }[] = []
           
           // Common template field names to look for
           const templateKeywords = [
@@ -304,7 +304,7 @@ export function HaloPSASimpleTemplates() {
             child_template_id: ticket.child_template_id,
             
             // Look for time/hour fields
-            time_fields: {},
+            time_fields: {} as { [key: string]: any },
             
             // Look for custom fields (potential template data)
             custom_fields: ticket.customfields || {},
@@ -330,7 +330,7 @@ export function HaloPSASimpleTemplates() {
             child_ids: ticket.child_ticket_ids,
             
             // Look for template indicators
-            template_indicators: []
+            template_indicators: [] as string[]
           }
 
           // Search for time-related data in all fields
@@ -356,7 +356,7 @@ export function HaloPSASimpleTemplates() {
         }) || []
 
         // Filter for tickets that show template patterns
-        const templatedTickets = templateAnalysis.filter(ticket => 
+        const templatedTickets = templateAnalysis.filter((ticket: any) => 
           ticket.template_id > 0 || 
           ticket.child_template_id > 0 ||
           ticket.workflow_id > 0 ||
@@ -368,7 +368,7 @@ export function HaloPSASimpleTemplates() {
         console.log('Template imprint analysis:', templatedTickets)
 
         if (templatedTickets.length > 0) {
-          const templateData = templatedTickets.map((ticket) => ({
+          const templateData = templatedTickets.map((ticket: any) => ({
             id: ticket.id,
             name: `${ticket.summary || `Ticket #${ticket.id}`}`,
             template_id: ticket.template_id,

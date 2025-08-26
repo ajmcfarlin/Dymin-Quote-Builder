@@ -67,7 +67,7 @@ export function HaloPSATemplateCreation() {
       const data = await response.json()
 
       if (data.success) {
-        setResults(prev => ({
+        setResults((prev: any) => ({
           ...prev,
           creation_test_results: data.results
         }))
@@ -102,7 +102,7 @@ export function HaloPSATemplateCreation() {
       const data = await response.json()
 
       if (data.success) {
-        setResults(prev => ({
+        setResults((prev: any) => ({
           ...prev,
           template_46_result: data.data
         }))
@@ -137,7 +137,7 @@ export function HaloPSATemplateCreation() {
       const data = await response.json()
 
       if (data.success) {
-        setResults(prev => ({
+        setResults((prev: any) => ({
           ...prev,
           child_template_46_result: data.data
         }))
@@ -172,7 +172,7 @@ export function HaloPSATemplateCreation() {
       const data = await response.json()
 
       if (data.success) {
-        setResults(prev => ({
+        setResults((prev: any) => ({
           ...prev,
           direct_quote_result: data.data
         }))
@@ -207,7 +207,7 @@ export function HaloPSATemplateCreation() {
       const data = await response.json()
 
       if (data.success) {
-        setResults(prev => ({
+        setResults((prev: any) => ({
           ...prev,
           basic_creation_result: data.data
         }))
@@ -245,7 +245,7 @@ export function HaloPSATemplateCreation() {
       const data = await response.json()
 
       if (data.success) {
-        setResults(prev => ({
+        setResults((prev: any) => ({
           ...prev,
           analysis_result: data.data
         }))
@@ -283,7 +283,7 @@ export function HaloPSATemplateCreation() {
       const data = await response.json()
 
       if (data.success) {
-        setResults(prev => ({
+        setResults((prev: any) => ({
           ...prev,
           single_test_result: data.data
         }))

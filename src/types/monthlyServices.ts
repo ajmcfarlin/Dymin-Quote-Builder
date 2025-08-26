@@ -1,3 +1,18 @@
+export interface NCentralConfig {
+  contractStructure: 'Lease' | 'Purchase' | 'Subscription'
+  licensingStructure: 'Device' | 'Customer'
+  totalDeviceLicenses: number
+  // For Purchase
+  totalInitialPurchasePrice: number
+  // For Lease/Subscription  
+  monthlyLeasePayment: number
+  monthlySubscriptionPayment: number
+  leaseLength: number
+  devicesMonitored: number
+  costPerDevice: number // This will be calculated dynamically
+  additionalSupport: number
+}
+
 export interface FixedCostTool {
   id: string
   name: string
@@ -25,6 +40,5 @@ export interface VariableCostTool {
 }
 
 export interface MonthlyServicesData {
-  fixedCostTools: FixedCostTool[]
   variableCostTools: VariableCostTool[]
 }

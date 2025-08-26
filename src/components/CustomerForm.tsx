@@ -22,7 +22,14 @@ const customerSchema = z.object({
     workstations: z.number().min(0),
     servers: z.number().min(0),
     printers: z.number().min(0),
-    phoneExtensions: z.number().min(0)
+    phoneExtensions: z.number().min(0),
+    wifiAccessPoints: z.number().min(0),
+    firewalls: z.number().min(0),
+    switches: z.number().min(0),
+    ups: z.number().min(0),
+    nas: z.number().min(0),
+    managedMobileDevices: z.number().min(0),
+    domainsUsedForEmail: z.number().min(0)
   })
 })
 
@@ -32,16 +39,28 @@ interface CustomerFormProps {
 }
 
 export function CustomerForm({ value, onChange }: CustomerFormProps) {
-  const { register, watch, formState: { errors } } = useForm<CustomerInfo>({
+  const { register, watch } = useForm<CustomerInfo>({
     resolver: zodResolver(customerSchema),
     defaultValues: value || {
       companyName: '',
       address: '',
-      region: '',
+      region: 'United States',
       contractMonths: 36,
       contractType: 'Managed Services',
       users: { full: 0, emailOnly: 0 },
-      infrastructure: { workstations: 0, servers: 0, printers: 0, phoneExtensions: 0 }
+      infrastructure: { 
+        workstations: 0, 
+        servers: 0, 
+        printers: 0, 
+        phoneExtensions: 0,
+        wifiAccessPoints: 0,
+        firewalls: 0,
+        switches: 0,
+        ups: 0,
+        nas: 0,
+        managedMobileDevices: 0,
+        domainsUsedForEmail: 0
+      }
     }
   })
 
@@ -132,6 +151,48 @@ export function CustomerForm({ value, onChange }: CustomerFormProps) {
             label="Phone Extensions"
             type="number"
             {...register('infrastructure.phoneExtensions', { valueAsNumber: true })}
+            min="0"
+          />
+          <Input
+            label="WiFi Access Points"
+            type="number"
+            {...register('infrastructure.wifiAccessPoints', { valueAsNumber: true })}
+            min="0"
+          />
+          <Input
+            label="Firewalls"
+            type="number"
+            {...register('infrastructure.firewalls', { valueAsNumber: true })}
+            min="0"
+          />
+          <Input
+            label="Switches"
+            type="number"
+            {...register('infrastructure.switches', { valueAsNumber: true })}
+            min="0"
+          />
+          <Input
+            label="UPS"
+            type="number"
+            {...register('infrastructure.ups', { valueAsNumber: true })}
+            min="0"
+          />
+          <Input
+            label="NAS"
+            type="number"
+            {...register('infrastructure.nas', { valueAsNumber: true })}
+            min="0"
+          />
+          <Input
+            label="Managed Mobile Devices"
+            type="number"
+            {...register('infrastructure.managedMobileDevices', { valueAsNumber: true })}
+            min="0"
+          />
+          <Input
+            label="Domains Used for Email"
+            type="number"
+            {...register('infrastructure.domainsUsedForEmail', { valueAsNumber: true })}
             min="0"
           />
         </div>
