@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
-import { Trash2 } from 'lucide-react'
+import { Trash2, ChevronDown, ChevronRight } from 'lucide-react'
 import { SetupService, CustomerInfo } from '@/types/quote'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { calculateSetupServiceHours } from '@/lib/setupServiceCalculations'
@@ -15,6 +15,18 @@ interface SetupServiceSelectorProps {
 }
 
 export function SetupServiceSelector({ setupServices, customer, upfrontPayment = 0, onChange, onUpfrontPaymentChange }: SetupServiceSelectorProps) {
+  const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set())
+
+  const toggleCardExpansion = (serviceId: string) => {
+    const newExpanded = new Set(expandedCards)
+    if (newExpanded.has(serviceId)) {
+      newExpanded.delete(serviceId)
+    } else {
+      newExpanded.add(serviceId)
+    }
+    setExpandedCards(newExpanded)
+  }
+
   const toggleService = (serviceId: string) => {
     const updatedServices = setupServices.map(service =>
       service.id === serviceId
@@ -149,24 +161,71 @@ export function SetupServiceSelector({ setupServices, customer, upfrontPayment =
         <div className="space-y-4">
           <h3 className="text-lg font-semibold text-gray-900">Selected Services Configuration</h3>
           
-          {activeServices.map((service) => (
-            <Card key={service.id}>
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <CardTitle className="text-base">{service.name}</CardTitle>
-                    {getSkillLevelBadge(service.skillLevel)}
+          {activeServices.map((service) => {
+            const isExpanded = expandedCards.has(service.id)
+            const servicePrice = customer && service.skillLevel ? 
+              (() => {
+                const baseRates = {
+                  1: { business: 155, afterhours: 155 },
+                  2: { business: 185, afterhours: 275 },
+                  3: { business: 275, afterhours: 375 }
+                }
+                const hours = calculateSetupServiceHours(service.id, service.isActive, customer)
+                const rate = baseRates[service.skillLevel]?.[service.factor2]
+                
+                if (!rate || isNaN(hours)) return '0.00'
+                
+                let totalCost = hours * rate
+                
+                // Email Migration includes license costs
+                if (service.id === 'email-migration') {
+                  const licenseCost = 42 * ((customer.users.full || 0) + (customer.users.emailOnly || 0))
+                  totalCost += licenseCost
+                }
+                
+                return totalCost.toFixed(2)
+              })()
+              : '0.00'
+
+            return (
+              <Card key={service.id}>
+                <CardHeader 
+                  className="py-3 md:cursor-auto cursor-pointer"
+                  onClick={() => toggleCardExpansion(service.id)}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="md:hidden flex-shrink-0">
+                        {isExpanded ? <ChevronDown size={16} style={{ color: '#15bef0' }} /> : <ChevronRight size={16} style={{ color: '#15bef0' }} />}
+                      </div>
+                      <CardTitle className="text-base">{service.name}</CardTitle>
+                      <div className="hidden md:block">
+                        {getSkillLevelBadge(service.skillLevel)}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {/* Mobile: Show price when collapsed */}
+                      <div className="md:hidden">
+                        {!isExpanded && (
+                          <span className="text-sm font-semibold text-gray-900">
+                            ${servicePrice}
+                          </span>
+                        )}
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          toggleService(service.id)
+                        }}
+                        className="text-red-600 hover:text-red-800 transition-colors p-1 cursor-pointer"
+                        title="Remove Service"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
                   </div>
-                  <button
-                    onClick={() => toggleService(service.id)}
-                    className="text-red-600 hover:text-red-800 transition-colors p-1 cursor-pointer"
-                    title="Remove Service"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              </CardHeader>
-              <CardContent>
+                </CardHeader>
+              <CardContent className={`${!isExpanded ? 'hidden md:block' : 'block'}`}>
                 {/* Configuration Row */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
                   <div>
@@ -310,7 +369,8 @@ export function SetupServiceSelector({ setupServices, customer, upfrontPayment =
                 </div>
               </CardContent>
             </Card>
-          ))}
+            )
+          })}
         </div>
       )}
 

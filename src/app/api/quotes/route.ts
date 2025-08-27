@@ -48,8 +48,8 @@ export async function GET(request: NextRequest) {
 
     const skip = (page - 1) * limit
 
-    // Build where clause - show all quotes for admin users, only own quotes for others
-    const where: any = user.role === 'admin' ? {} : { userId: user.id }
+    // Build where clause - show all quotes for all authenticated users
+    const where: any = {}
     if (search) {
       where.OR = [
         { customerName: { contains: search, mode: 'insensitive' } },

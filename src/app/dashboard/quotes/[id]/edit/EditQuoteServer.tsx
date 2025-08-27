@@ -42,10 +42,8 @@ async function getQuoteData(quoteId: string) {
     redirect('/login')
   }
 
-  // Get the quote
-  const where = user.role === 'admin' 
-    ? { id: quoteId }
-    : { id: quoteId, userId: user.id }
+  // Get the quote - allow all authenticated users to edit any quote
+  const where = { id: quoteId }
 
   const quote = await prisma.quote.findUnique({
     where,

@@ -4,6 +4,7 @@ import React, { useState } from 'react'
 import { Save, Send, ExternalLink } from 'lucide-react'
 import { QuoteAPI, stateToCreateQuoteRequest } from '@/lib/quoteApi'
 import { SavedQuote } from '@/types/savedQuote'
+import { toast } from 'sonner'
 
 interface QuoteSaveLoadProps {
   currentQuoteId?: string
@@ -33,7 +34,7 @@ export function QuoteSaveLoad({
 
   const handleSave = async () => {
     if (!quoteState.customer.companyName.trim()) {
-      alert('Please enter a company name before saving.')
+      toast.error('Please enter a company name before saving.')
       return
     }
 
@@ -71,7 +72,7 @@ export function QuoteSaveLoad({
 
   const handleGenerateHalo = async () => {
     if (!currentQuoteId) {
-      alert('Please save the quote first before generating in Halo PSA.')
+      toast.error('Please save the quote first before generating in Halo PSA.')
       return
     }
 

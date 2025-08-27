@@ -42,8 +42,7 @@ export async function GET(
 
     const quote = await prisma.quote.findFirst({
       where: {
-        id: resolvedParams.id,
-        userId: user.id
+        id: resolvedParams.id
       }
     })
 
@@ -92,11 +91,10 @@ export async function PUT(
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    // Check if quote exists and belongs to user
+    // Check if quote exists - allow all authenticated users to update any quote
     const existingQuote = await prisma.quote.findFirst({
       where: {
-        id: resolvedParams.id,
-        userId: user.id
+        id: resolvedParams.id
       }
     })
 
@@ -199,18 +197,16 @@ export async function DELETE(
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    // Check if quote exists and belongs to user
+    // Check if quote exists - allow all authenticated users to delete any quote
     const existingQuote = await prisma.quote.findFirst({
       where: {
-        id: resolvedParams.id,
-        userId: user.id
+        id: resolvedParams.id
       }
     })
 
     if (!existingQuote) {
       return NextResponse.json({ error: 'Quote not found' }, { status: 404 })
     }
-
 
     await prisma.quote.delete({
       where: { id: resolvedParams.id }

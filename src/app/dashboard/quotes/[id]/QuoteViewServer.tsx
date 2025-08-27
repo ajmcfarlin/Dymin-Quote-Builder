@@ -41,10 +41,8 @@ async function getQuoteData(quoteId: string) {
     redirect('/login')
   }
 
-  // Get the quote
-  const where = user.role === 'admin' 
-    ? { id: quoteId }
-    : { id: quoteId, userId: user.id }
+  // Get the quote - allow all authenticated users to view any quote
+  const where = { id: quoteId }
 
   const quote = await prisma.quote.findUnique({
     where,
@@ -70,8 +68,8 @@ export default async function QuoteViewServer({ quoteId }: QuoteViewServerProps)
 
   return (
     <DashboardLayout>
-      <div className="p-6">
-        <div className="flex items-center justify-between mb-6">
+      <div className="p-4 md:p-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 space-y-4 md:space-y-0">
           <div className="flex items-center space-x-4">
             <Link
               href="/dashboard/quotes"
@@ -80,14 +78,14 @@ export default async function QuoteViewServer({ quoteId }: QuoteViewServerProps)
               <ArrowLeft className="w-5 h-5" />
             </Link>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">
+              <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
                 Quote {quote.quoteNumber || `#${quote.id.slice(0, 8)}`}
               </h1>
             </div>
           </div>
           <Link
             href={`/dashboard/quotes/${quoteId}/edit`}
-            className="px-4 py-2 rounded-lg flex items-center space-x-2 border text-gray-900 hover:bg-gray-50 font-medium"
+            className="px-4 py-2 rounded-lg flex items-center justify-center space-x-2 border text-gray-900 hover:bg-gray-50 font-medium"
             style={{ borderColor: '#15bef0' }}
           >
             <Edit className="w-4 h-4" />

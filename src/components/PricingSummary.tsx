@@ -7,6 +7,7 @@ import { MonthlyServicesData } from '@/types/monthlyServices'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { DEFAULT_VARIABLE_COST_TOOLS, calculateToolQuantityFromInfrastructure } from '@/lib/monthlyServices'
 import { QuoteAPI, stateToCreateQuoteRequest } from '@/lib/quoteApi'
+import { toast } from 'sonner'
 // Removed unused import
 
 interface PricingSummaryProps {
@@ -90,7 +91,7 @@ export function PricingSummary({ calculations, monthlyServices, supportDevices, 
   // Generate/Update quote function
   const handleGenerateQuote = async () => {
     if (!calculations?.customer?.companyName.trim()) {
-      alert('Please enter a company name before ' + (editMode ? 'updating' : 'generating') + ' the quote.')
+      toast.error('Please enter a company name before ' + (editMode ? 'updating' : 'generating') + ' the quote.')
       return
     }
 
@@ -128,7 +129,7 @@ export function PricingSummary({ calculations, monthlyServices, supportDevices, 
       }
     } catch (error) {
       console.error('Failed to ' + (editMode ? 'update' : 'generate') + ' quote:', error)
-      alert('Failed to generate quote. Please try again.')
+      toast.error('Failed to generate quote. Please try again.')
     } finally {
       setIsGenerating(false)
     }
@@ -421,54 +422,78 @@ export function PricingSummary({ calculations, monthlyServices, supportDevices, 
               <span className="text-white">Contract Type:</span>
               <span className="text-white">{calculations.customer.contractType}</span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-white">Users (Full/Email):</span>
-              <span className="text-white">{calculations.customer.users.full || 0}/{calculations.customer.users.emailOnly || 0}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-white">Workstations:</span>
-              <span className="text-white">{calculations.customer.infrastructure.workstations || 0}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-white">Servers:</span>
-              <span className="text-white">{calculations.customer.infrastructure.servers || 0}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-white">Printers:</span>
-              <span className="text-white">{calculations.customer.infrastructure.printers || 0}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-white">Phone Extensions:</span>
-              <span className="text-white">{calculations.customer.infrastructure.phoneExtensions || 0}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-white">WiFi Access Points:</span>
-              <span className="text-white">{calculations.customer.infrastructure.wifiAccessPoints || 0}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-white">Firewalls:</span>
-              <span className="text-white">{calculations.customer.infrastructure.firewalls || 0}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-white">Switches:</span>
-              <span className="text-white">{calculations.customer.infrastructure.switches || 0}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-white">UPS:</span>
-              <span className="text-white">{calculations.customer.infrastructure.ups || 0}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-white">NAS:</span>
-              <span className="text-white">{calculations.customer.infrastructure.nas || 0}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-white">Mobile Devices:</span>
-              <span className="text-white">{calculations.customer.infrastructure.managedMobileDevices || 0}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-white">Email Domains:</span>
-              <span className="text-white">{calculations.customer.infrastructure.domainsUsedForEmail || 0}</span>
-            </div>
+            {((calculations.customer.users.full || 0) > 0 || (calculations.customer.users.emailOnly || 0) > 0) && (
+              <div className="flex justify-between">
+                <span className="text-white">Users (Full/Email):</span>
+                <span className="text-white">{calculations.customer.users.full || 0}/{calculations.customer.users.emailOnly || 0}</span>
+              </div>
+            )}
+            {(calculations.customer.infrastructure.workstations || 0) > 0 && (
+              <div className="flex justify-between">
+                <span className="text-white">Workstations:</span>
+                <span className="text-white">{calculations.customer.infrastructure.workstations}</span>
+              </div>
+            )}
+            {(calculations.customer.infrastructure.servers || 0) > 0 && (
+              <div className="flex justify-between">
+                <span className="text-white">Servers:</span>
+                <span className="text-white">{calculations.customer.infrastructure.servers}</span>
+              </div>
+            )}
+            {(calculations.customer.infrastructure.printers || 0) > 0 && (
+              <div className="flex justify-between">
+                <span className="text-white">Printers:</span>
+                <span className="text-white">{calculations.customer.infrastructure.printers}</span>
+              </div>
+            )}
+            {(calculations.customer.infrastructure.phoneExtensions || 0) > 0 && (
+              <div className="flex justify-between">
+                <span className="text-white">Phone Extensions:</span>
+                <span className="text-white">{calculations.customer.infrastructure.phoneExtensions}</span>
+              </div>
+            )}
+            {(calculations.customer.infrastructure.wifiAccessPoints || 0) > 0 && (
+              <div className="flex justify-between">
+                <span className="text-white">WiFi Access Points:</span>
+                <span className="text-white">{calculations.customer.infrastructure.wifiAccessPoints}</span>
+              </div>
+            )}
+            {(calculations.customer.infrastructure.firewalls || 0) > 0 && (
+              <div className="flex justify-between">
+                <span className="text-white">Firewalls:</span>
+                <span className="text-white">{calculations.customer.infrastructure.firewalls}</span>
+              </div>
+            )}
+            {(calculations.customer.infrastructure.switches || 0) > 0 && (
+              <div className="flex justify-between">
+                <span className="text-white">Switches:</span>
+                <span className="text-white">{calculations.customer.infrastructure.switches}</span>
+              </div>
+            )}
+            {(calculations.customer.infrastructure.ups || 0) > 0 && (
+              <div className="flex justify-between">
+                <span className="text-white">UPS:</span>
+                <span className="text-white">{calculations.customer.infrastructure.ups}</span>
+              </div>
+            )}
+            {(calculations.customer.infrastructure.nas || 0) > 0 && (
+              <div className="flex justify-between">
+                <span className="text-white">NAS:</span>
+                <span className="text-white">{calculations.customer.infrastructure.nas}</span>
+              </div>
+            )}
+            {(calculations.customer.infrastructure.managedMobileDevices || 0) > 0 && (
+              <div className="flex justify-between">
+                <span className="text-white">Mobile Devices:</span>
+                <span className="text-white">{calculations.customer.infrastructure.managedMobileDevices}</span>
+              </div>
+            )}
+            {(calculations.customer.infrastructure.domainsUsedForEmail || 0) > 0 && (
+              <div className="flex justify-between">
+                <span className="text-white">Email Domains:</span>
+                <span className="text-white">{calculations.customer.infrastructure.domainsUsedForEmail}</span>
+              </div>
+            )}
           </div>
         </div>
         
