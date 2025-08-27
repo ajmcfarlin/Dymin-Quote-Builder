@@ -67,6 +67,12 @@ export function SupportLaborSelector({ devices = [], onChange }: SupportLaborSel
   const [expandedDevices, setExpandedDevices] = useState<Set<string>>(new Set())
   const [expandedMobileCards, setExpandedMobileCards] = useState<Set<string>>(new Set())
   
+  const handleNumberInputFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    if (e.target.value === '0') {
+      e.target.select()
+    }
+  }
+  
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -281,6 +287,7 @@ export function SupportLaborSelector({ devices = [], onChange }: SupportLaborSel
                                 min="0"
                                 value={device.quantity}
                                 onChange={(e) => updateDeviceQuantity(device.id, parseInt(e.target.value) || 0)}
+                                onFocus={handleNumberInputFocus}
                                 className="w-20 px-2 py-1 text-sm border border-gray-300 rounded bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                               />
                             )}
@@ -460,6 +467,7 @@ export function SupportLaborSelector({ devices = [], onChange }: SupportLaborSel
                                 min="0"
                                 value={device.quantity}
                                 onChange={(e) => updateDeviceQuantity(device.id, parseInt(e.target.value) || 0)}
+                                onFocus={handleNumberInputFocus}
                                 className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
                               />
                             )}

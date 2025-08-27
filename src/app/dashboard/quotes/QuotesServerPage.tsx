@@ -72,6 +72,7 @@ async function getQuotesData(searchParams: QuotesServerPageProps['searchParams']
         customerName: true,
         monthlyTotal: true,
         contractTotal: true,
+        contractMonths: true,
         createdAt: true,
         updatedAt: true,
         user: {
