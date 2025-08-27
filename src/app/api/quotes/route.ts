@@ -67,6 +67,7 @@ export async function GET(request: NextRequest) {
           customerName: true,
           monthlyTotal: true,
           contractTotal: true,
+          contractMonths: true,
           createdAt: true,
           updatedAt: true,
           user: {
