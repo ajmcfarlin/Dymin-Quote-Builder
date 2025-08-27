@@ -308,15 +308,15 @@ export function QuoteView({ quote }: QuoteViewProps) {
               Quote Breakdown
             </div>
             {hasDiscount && (
-              <div className="text-sm font-normal text-right" style={{ marginLeft: 'auto', paddingLeft: '260px' }}>
-                <div className="text-gray-600">
+              <div className="text-sm font-normal text-right ml-auto max-w-xs">
+                <div className="text-gray-600 break-words">
                   Discount: {quote.discountType === 'percentage' ? `${quote.discountValue}%` : 
                     quote.discountType === 'raw_dollar' ? formatCurrency(quote.discountValue || 0) :
                     quote.discountType === 'margin_override' ? `${quote.discountValue}% margin` :
                     quote.discountType === 'per_user' ? `${formatCurrency(quote.discountValue || 0)}/user` :
                     'Custom pricing'}
                 </div>
-                <div className={`font-medium ${isIncrease ? 'text-green-600' : 'text-red-600'}`}>
+                <div className={`font-medium break-words ${isIncrease ? 'text-green-600' : 'text-red-600'}`}>
                   {isIncrease ? '+' : '-'}{formatCurrency(Math.abs(totalDiscountAmount))}
                 </div>
               </div>

@@ -195,10 +195,11 @@ export function MonthlyServicesSelector({ monthlyServices, customer, onChange }:
             <CardTitle>Variable Cost Tools Configuration</CardTitle>
             <p className="text-sm text-gray-600">Configure quantities and pricing for monthly tools and licensing</p>
           </CardHeader>
-          <CardContent>
+          <CardContent className="overflow-hidden">
             {/* Desktop Table View */}
-            <div className="hidden md:block overflow-x-auto">
-              <table className="w-full text-sm">
+            <div className="hidden md:block">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm min-w-max">
                 <thead>
                   <tr className="border-b border-gray-200">
                     <th className="text-left py-2 px-2 font-medium text-gray-700">Tool</th>
@@ -368,6 +369,7 @@ export function MonthlyServicesSelector({ monthlyServices, customer, onChange }:
                   </tr>
                 </tbody>
               </table>
+              </div>
             </div>
 
             {/* Mobile Card View */}

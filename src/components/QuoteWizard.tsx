@@ -24,8 +24,13 @@ export function QuoteWizard({ readOnly = false, editMode = false, quoteId }: Quo
   const { currentStep, currentMonthlyTab, quoteSummaryExpanded, setCurrentStep, setCurrentMonthlyTab, setQuoteSummaryExpanded } = useQuoteUI()
 
   const scrollToTop = () => {
-    if (mainContentRef.current) {
-      mainContentRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    // Find the main scrollable container and scroll it to top
+    const mainElement = document.querySelector('main')
+    if (mainElement) {
+      mainElement.scrollTo({ top: 0, behavior: 'smooth' })
+    } else {
+      // Fallback to window scroll
+      window.scrollTo({ top: 0, behavior: 'smooth' })
     }
   }
   const { customer, updateCustomer } = useQuoteCustomer()
@@ -92,10 +97,10 @@ export function QuoteWizard({ readOnly = false, editMode = false, quoteId }: Quo
           </div>
         </div>
 
-        <nav className="flex sm:space-x-8 space-x-0">
+        <nav className="flex flex-wrap sm:space-x-8 space-x-0 gap-y-4">
           <button
             onClick={() => setCurrentStep(1)}
-            className={`pb-2 border-b-2 font-medium text-sm flex items-center cursor-pointer flex-1 sm:flex-none justify-center sm:justify-start ${
+            className={`pb-2 border-b-2 font-medium text-sm flex items-center cursor-pointer flex-1 sm:flex-none justify-center sm:justify-start min-w-0 ${
               currentStep === 1
                 ? 'border-transparent text-gray-500 hover:text-gray-700'
                 : 'border-transparent text-gray-500 hover:text-gray-700'
@@ -344,7 +349,7 @@ export function QuoteWizard({ readOnly = false, editMode = false, quoteId }: Quo
       {/* Quote Summary - Gently transitions on Review tab */}
       <div className={`flex-shrink-0 order-2 transition-all duration-500 ease-in-out ${
         currentStep === 3 
-          ? 'w-0 lg:translate-x-full opacity-0 pointer-events-none overflow-hidden' 
+          ? 'hidden lg:block w-0 lg:translate-x-full opacity-0 pointer-events-none overflow-hidden' 
           : quoteSummaryExpanded 
             ? 'w-full lg:w-1/2 lg:translate-x-0 opacity-100' 
             : 'w-full lg:w-80 lg:translate-x-0 opacity-100'
