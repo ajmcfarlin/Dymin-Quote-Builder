@@ -5,6 +5,7 @@ import { formatCurrency } from '@/lib/utils'
 import { CalendarDays, User, Building, MapPin, FileText, Calculator, Clock } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { calculateSetupServiceHours } from '@/lib/setupServiceCalculations'
+import { toast } from 'sonner'
 
 interface QuoteViewProps {
   quote: SavedQuote & {
@@ -24,6 +25,135 @@ export function QuoteView({ quote }: QuoteViewProps) {
     })
   }
 
+  const handlePrint = () => {
+    // Create a new window for printing
+    const printWindow = window.open('', '_blank', 'width=800,height=600')
+    if (!printWindow) {
+      toast.error('Please allow popups for this site to enable printing')
+      return
+    }
+
+    // Get the quote content
+    const quoteContent = document.getElementById('quote-content')
+    if (!quoteContent) {
+      toast.error('Quote content not found')
+      printWindow.close()
+      return
+    }
+
+    // Create the print document
+    const printDocument = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <title>Quote ${quote.quoteNumber || quote.id}</title>
+        <style>
+          @page { 
+            margin: 0.75in; 
+            size: A4;
+          }
+          body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-size: 12px;
+            line-height: 1.3;
+            color: #000;
+            margin: 0;
+            padding: 8px;
+          }
+          .space-y-6 > * + * { margin-top: 4px; }
+          .grid { 
+            display: table; 
+            width: 100%; 
+            border-collapse: collapse;
+          }
+          .grid > * { 
+            display: table-cell; 
+            vertical-align: top; 
+            padding: 0 8px;
+          }
+          .grid > *:first-child { padding-left: 8px; }
+          .grid > *:last-child { padding-right: 8px; }
+          .gap-6 { gap: 12px; }
+          .card { 
+            border: 1px solid #e5e7eb; 
+            margin-bottom: 4px; 
+            border-radius: 4px;
+          }
+          .card-header { 
+            background-color: #f9f9f9; 
+            padding: 6px 12px; 
+            border-bottom: 1px solid #e5e7eb;
+            border-radius: 4px 4px 0 0;
+          }
+          .card-content { padding: 8px 12px; }
+          .flex { display: flex; }
+          .items-center { align-items: center; }
+          .justify-between { justify-content: space-between; }
+          .ml-auto { margin-left: auto; }
+          .space-y-2 > * + * { margin-top: 8px; }
+          .space-y-4 > * + * { margin-top: 4px; }
+          .text-sm { font-size: 14px; }
+          .text-lg { font-size: 18px; }
+          .font-semibold { font-weight: 600; }
+          .font-bold { font-weight: 700; }
+          .text-gray-500 { color: #6b7280; }
+          .text-gray-600 { color: #4b5563; }
+          .text-gray-700 { color: #374151; }
+          .text-gray-900 { color: #111827; }
+          .border-r { border-right: 1px solid #e5e7eb; }
+          .border-b { border-bottom: 1px solid #e5e7eb; }
+          .pr-6 { padding-right: 24px; }
+          .pl-6 { padding-left: 24px; }
+          .px-6 { padding-left: 24px; padding-right: 24px; }
+          .py-2 { padding-top: 4px; padding-bottom: 4px; }
+          .mb-2 { margin-bottom: 4px; }
+          .mb-4 { margin-bottom: 8px; }
+          .space-y-6 { margin-top: 0; }
+          .space-y-6 > div { padding-left: 6px; padding-right: 6px; }
+          .space-y-2 > div { padding-left: 6px; padding-right: 6px; }
+          .print\\:hidden { display: none !important; }
+          .w-5 { width: 20px; }
+          .h-5 { height: 20px; }
+          .mr-2 { margin-right: 8px; }
+          svg { display: none; }
+          .line-through { text-decoration: line-through; }
+          h1 { font-size: 24px; font-weight: bold; margin: 0 0 16px 0; }
+          h2 { font-size: 18px; font-weight: 600; margin: 0 0 12px 0; }
+          h3 { font-size: 16px; font-weight: 600; margin: 0 0 8px 0; }
+          h4 { font-size: 14px; font-weight: 600; margin: 0 0 6px 0; }
+          table { width: 100%; border-collapse: collapse; }
+          th, td { 
+            padding: 8px 12px; 
+            border: 1px solid #e5e7eb; 
+            text-align: left;
+          }
+          th { 
+            background-color: #f9f9f9; 
+            font-weight: 600;
+          }
+        </style>
+      </head>
+      <body>
+        ${quoteContent.outerHTML}
+      </body>
+      </html>
+    `
+
+    // Write the document and trigger print
+    printWindow.document.write(printDocument)
+    printWindow.document.close()
+    
+    // Wait for content to load then print
+    printWindow.onload = function() {
+      setTimeout(() => {
+        printWindow.print()
+        printWindow.close()
+      }, 500)
+    }
+  }
+
+
   // Calculate discounted amounts
   const calculateDiscountedTotal = (originalTotal: number) => {
     if (!quote.discountType || quote.discountType === 'none' || !quote.discountValue) return originalTotal
@@ -37,8 +167,8 @@ export function QuoteView({ quote }: QuoteViewProps) {
         const estimatedCost = originalTotal * 0.35 // Rough 35% cost estimate
         return estimatedCost / (1 - quote.discountValue / 100)
       case 'per_user':
-        const totalUsers = (quote.customerData?.users?.full || 0) + (quote.customerData?.users?.emailOnly || 0)
-        return totalUsers > 0 ? quote.discountValue * totalUsers : originalTotal
+        const fullUsers = quote.customerData?.users?.full || 0
+        return quote.discountValue > 0 && fullUsers > 0 ? quote.discountValue * fullUsers : originalTotal
       case 'override':
         return quote.discountValue
       default:
@@ -47,9 +177,10 @@ export function QuoteView({ quote }: QuoteViewProps) {
   }
 
   const hasDiscount = quote.discountType && quote.discountType !== 'none' && quote.discountValue && quote.discountValue > 0
-  const originalTotal = quote.monthlyTotal
-  const discountedTotal = calculateDiscountedTotal(originalTotal)
+  const originalTotal = quote.originalMonthlyTotal || quote.monthlyTotal
+  const discountedTotal = quote.discountedTotal || quote.monthlyTotal
   const totalDiscountAmount = hasDiscount ? originalTotal - discountedTotal : 0
+  const isIncrease = totalDiscountAmount < 0
 
   const calculateDiscountedComponent = (componentPrice: number) => {
     if (!hasDiscount || originalTotal === 0) return componentPrice
@@ -76,19 +207,19 @@ export function QuoteView({ quote }: QuoteViewProps) {
   }
 
   return (
-    <div className="space-y-6">
+    <div id="quote-content" className="space-y-6 print:break-inside-avoid">
 
       {/* Customer Information */}
-      <Card>
-        <CardHeader>
+      <Card className="print:break-inside-avoid card">
+        <CardHeader className="card-header">
           <CardTitle className="flex items-center">
             <Building className="w-5 h-5 mr-2" />
             Customer Information
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="card-content">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="pr-6 border-r" style={{ borderColor: '#15bef0' }}>
+            <div className="md:pr-6 md:border-r mb-4 md:mb-0" style={{ borderColor: '#15bef0' }}>
               <h4 className="font-semibold text-gray-900">{quote.customerName}</h4>
               {quote.customerEmail && (
                 <p className="text-gray-600">{quote.customerEmail}</p>
@@ -100,7 +231,7 @@ export function QuoteView({ quote }: QuoteViewProps) {
                 </div>
               )}
             </div>
-            <div className="px-6 border-r" style={{ borderColor: '#15bef0' }}>
+            <div className="md:px-6 md:border-r mb-4 md:mb-0" style={{ borderColor: '#15bef0' }}>
               <div className="space-y-2 text-sm">
                 <div className="flex gap-3">
                   <span className="text-gray-500 font-medium">Region:</span>
@@ -116,7 +247,7 @@ export function QuoteView({ quote }: QuoteViewProps) {
                 </div>
               </div>
             </div>
-            <div className="pl-6">
+            <div className="md:pl-6">
               {quote.customerData?.users && (
                 <div className="space-y-2 text-sm">
                   <div className="flex gap-3">
@@ -136,8 +267,8 @@ export function QuoteView({ quote }: QuoteViewProps) {
 
       {/* Infrastructure Overview */}
       {quote.customerData?.infrastructure && (
-        <Card>
-          <CardHeader>
+        <Card className="print:break-inside-avoid card">
+          <CardHeader className="card-header">
             <CardTitle>Infrastructure</CardTitle>
           </CardHeader>
           <CardContent>
@@ -151,7 +282,7 @@ export function QuoteView({ quote }: QuoteViewProps) {
                 if (columnEntries.length === 0) return null
                 
                 return (
-                  <div key={colIndex} className={`space-y-2 ${colIndex === 0 ? 'pr-6 border-r' : colIndex === 1 ? 'px-6 border-r' : colIndex === 2 ? 'px-6 border-r' : 'pl-6'}`} style={colIndex !== 0 && colIndex !== 3 ? { borderColor: '#15bef0' } : colIndex === 0 ? { borderColor: '#15bef0' } : {}}>
+                  <div key={colIndex} className={`space-y-2 ${colIndex === 0 ? 'md:pr-6 md:border-r' : colIndex === 1 ? 'md:px-6 md:border-r' : colIndex === 2 ? 'md:px-6 md:border-r' : 'md:pl-6'}`} style={colIndex !== 0 && colIndex !== 3 ? { borderColor: '#15bef0' } : colIndex === 0 ? { borderColor: '#15bef0' } : {}}>
                     {columnEntries.map(([key, value]) => (
                       <div key={key} className="flex gap-3">
                         <span className="text-gray-500 font-medium capitalize">
@@ -169,15 +300,15 @@ export function QuoteView({ quote }: QuoteViewProps) {
       )}
 
       {/* Quote Breakdown */}
-      <Card>
-        <CardHeader>
+      <Card className="print:break-inside-avoid card">
+        <CardHeader className="card-header">
           <CardTitle className="flex items-center justify-between">
             <div className="flex items-center">
               <Calculator className="w-5 h-5 mr-2" />
               Quote Breakdown
             </div>
             {hasDiscount && (
-              <div className="text-sm font-normal text-right">
+              <div className="text-sm font-normal text-right" style={{ marginLeft: 'auto', paddingLeft: '260px' }}>
                 <div className="text-gray-600">
                   Discount: {quote.discountType === 'percentage' ? `${quote.discountValue}%` : 
                     quote.discountType === 'raw_dollar' ? formatCurrency(quote.discountValue || 0) :
@@ -185,8 +316,8 @@ export function QuoteView({ quote }: QuoteViewProps) {
                     quote.discountType === 'per_user' ? `${formatCurrency(quote.discountValue || 0)}/user` :
                     'Custom pricing'}
                 </div>
-                <div className="text-red-600 font-medium">
-                  -{formatCurrency(totalDiscountAmount)}
+                <div className={`font-medium ${isIncrease ? 'text-green-600' : 'text-red-600'}`}>
+                  {isIncrease ? '+' : '-'}{formatCurrency(Math.abs(totalDiscountAmount))}
                 </div>
               </div>
             )}
@@ -202,9 +333,9 @@ export function QuoteView({ quote }: QuoteViewProps) {
                   {quote.setupServices
                     .filter((service: any) => service.isActive)
                     .map((service: any, index: number) => (
-                      <div key={index} className="flex justify-between items-center py-2 border-b border-gray-100 last:border-b-0">
-                        <span className="text-gray-700">{service.name}</span>
-                        <div className="text-right">
+                      <div key={index} className="flex justify-between items-center py-2 border-b border-gray-100 last:border-b-0 gap-4">
+                        <span className="text-gray-700 flex-1">{service.name}</span>
+                        <div className="text-right flex-shrink-0">
                           {(() => {
                             const setupPrice = calculateSetupServicePrice(service)
                             return hasDiscount ? (
@@ -256,14 +387,14 @@ export function QuoteView({ quote }: QuoteViewProps) {
                   {quote.monthlyServices.variableCostTools
                     .filter((tool: any) => tool.isActive && tool.nodesUnitsSupported > 0)
                     .map((tool: any, index: number) => (
-                      <div key={index} className="flex justify-between items-center py-2 border-b border-gray-100 last:border-b-0">
+                      <div key={index} className="flex justify-between items-center py-2 border-b border-gray-100 last:border-b-0 gap-4">
                         <div className="flex-1">
                           <span className="text-gray-700">{tool.name}</span>
                           <div className="text-sm text-gray-500">
                             {tool.nodesUnitsSupported} units × {formatCurrency(tool.pricePerNodeUnit || 0)}
                           </div>
                         </div>
-                        <div className="text-right">
+                        <div className="text-right flex-shrink-0">
                           {hasDiscount ? (
                             <div>
                               <span className="text-gray-500 line-through text-sm">{formatCurrency(tool.extendedPrice || 0)}</span>
@@ -308,14 +439,14 @@ export function QuoteView({ quote }: QuoteViewProps) {
                     .map((device: any, index: number) => {
                       const unitPrice = device.monthlyPrice || 0
                       return (
-                        <div key={index} className="flex justify-between items-center py-2 border-b border-gray-100 last:border-b-0">
+                        <div key={index} className="flex justify-between items-center py-2 border-b border-gray-100 last:border-b-0 gap-4">
                           <div className="flex-1">
                             <span className="text-gray-700">{device.name}</span>
                             <div className="text-sm text-gray-500">
                               {device.quantity} devices × {formatCurrency(unitPrice / (device.quantity || 1))}
                             </div>
                           </div>
-                          <div className="text-right">
+                          <div className="text-right flex-shrink-0">
                             {hasDiscount ? (
                               <div>
                                 <span className="text-gray-500 line-through text-sm">{formatCurrency(unitPrice)}</span>
@@ -359,14 +490,14 @@ export function QuoteView({ quote }: QuoteViewProps) {
                   {Object.entries(quote.otherLaborData)
                     .filter(([_, labor]: [string, any]) => labor.isActive && labor.hours > 0)
                     .map(([key, labor]: [string, any], index: number) => (
-                      <div key={index} className="flex justify-between items-center py-2 border-b border-gray-100 last:border-b-0">
+                      <div key={index} className="flex justify-between items-center py-2 border-b border-gray-100 last:border-b-0 gap-4">
                         <div className="flex-1">
                           <span className="text-gray-700 capitalize">{key.replace(/([A-Z])/g, ' $1').toLowerCase()}</span>
                           <div className="text-sm text-gray-500">
                             {labor.hours} hours × {formatCurrency(labor.rate || 0)}
                           </div>
                         </div>
-                        <div className="text-right">
+                        <div className="text-right flex-shrink-0">
                           {(() => {
                             const laborPrice = (labor.hours || 0) * (labor.rate || 0)
                             return hasDiscount ? (
@@ -389,11 +520,11 @@ export function QuoteView({ quote }: QuoteViewProps) {
             {/* Financial Summary */}
             <div className="border-t border-gray-200 pt-4">
               <div className="space-y-3">
-                {/* Show original price if discount exists */}
-                {quote.discountType && quote.discountType !== 'none' && quote.discountedTotal && (
+                {/* Show original price if discount exists and values are different */}
+                {hasDiscount && totalDiscountAmount !== 0 && (
                   <div className="flex justify-between items-center py-2 text-gray-500">
                     <span className="line-through">Original Monthly:</span>
-                    <span className="text-base line-through">{formatCurrency(quote.monthlyTotal)}</span>
+                    <span className="text-base line-through">{formatCurrency(originalTotal)}</span>
                   </div>
                 )}
                 <div className="flex justify-between items-center py-2">
@@ -406,11 +537,11 @@ export function QuoteView({ quote }: QuoteViewProps) {
                   <span className="text-gray-600">Contract Length:</span>
                   <span className="text-lg font-semibold">{quote.contractMonths} months</span>
                 </div>
-                {/* Show original contract total if discount exists */}
-                {quote.discountType && quote.discountType !== 'none' && quote.discountedTotal && (
+                {/* Show original contract total if discount exists and values are different */}
+                {hasDiscount && totalDiscountAmount !== 0 && (
                   <div className="flex justify-between items-center py-2 text-gray-500">
                     <span className="line-through">Original Total:</span>
-                    <span className="text-base line-through">{formatCurrency(quote.monthlyTotal * quote.contractMonths)}</span>
+                    <span className="text-base line-through">{formatCurrency(originalTotal * quote.contractMonths)}</span>
                   </div>
                 )}
                 <div className="flex justify-between items-center py-2">
@@ -462,21 +593,11 @@ export function QuoteView({ quote }: QuoteViewProps) {
       <div className="flex justify-between items-center py-6 print:hidden border-t border-gray-200">
         <div className="flex space-x-4">
           <button
-            onClick={() => window.print()}
+            onClick={handlePrint}
             className="text-white px-6 py-2 rounded-lg font-medium hover:opacity-90"
             style={{ backgroundColor: '#15bef0' }}
           >
             Print Quote
-          </button>
-          <button
-            className="px-6 py-2 rounded-lg font-medium border text-gray-900 hover:bg-gray-50"
-            style={{ borderColor: '#15bef0' }}
-            onClick={() => {
-              // TODO: Implement PDF download
-              alert('PDF download will be implemented')
-            }}
-          >
-            Download PDF
           </button>
         </div>
         

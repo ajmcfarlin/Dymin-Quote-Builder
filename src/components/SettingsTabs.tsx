@@ -313,14 +313,33 @@ export function SettingsTabs() {
 
   return (
     <div className="space-y-6">
-      {/* Tab Navigation */}
+      {/* Tab Navigation - Mobile Friendly */}
       <div className="border-b border-gray-200">
-        <nav className="-mb-px flex space-x-8">
+        {/* Mobile: Dropdown Navigation */}
+        <div className="md:hidden mb-4">
+          <label htmlFor="tab-select" className="block text-sm font-medium text-gray-700 mb-2">Select Tab</label>
+          <select
+            id="tab-select"
+            value={activeTab}
+            onChange={(e) => setActiveTab(e.target.value)}
+            className="block w-full rounded-lg border-2 bg-white py-4 pl-4 pr-10 text-lg text-gray-900 font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2"
+            style={{ borderColor: '#15bef0' }}
+          >
+            {tabs.map((tab) => (
+              <option key={tab.id} value={tab.id}>
+                {tab.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        
+        {/* Desktop: Horizontal Tabs */}
+        <nav className="hidden md:flex -mb-px space-x-8">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`py-2 px-1 border-b-2 font-medium text-sm cursor-pointer ${
+              className={`py-2 px-1 border-b-2 font-medium text-sm cursor-pointer whitespace-nowrap ${
                 activeTab === tab.id
                   ? 'text-white'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -489,36 +508,38 @@ export function SettingsTabs() {
                 <p className="text-sm text-gray-600">Enter a HaloPSA ticket template ID to add to your available templates</p>
               </CardHeader>
               <CardContent>
-                <div className="flex gap-4">
-                  <div className="flex-1">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Template ID
-                    </label>
-                    <input
-                      type="text"
-                      value={newTemplate.templateId}
-                      onChange={(e) => setNewTemplate(prev => ({ ...prev, templateId: e.target.value }))}
-                      placeholder="Enter HaloPSA template ID (e.g., 12345)"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Template ID
+                      </label>
+                      <input
+                        type="text"
+                        value={newTemplate.templateId}
+                        onChange={(e) => setNewTemplate(prev => ({ ...prev, templateId: e.target.value }))}
+                        placeholder="Enter HaloPSA template ID (e.g., 12345)"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Template Name (Optional)
+                      </label>
+                      <input
+                        type="text"
+                        value={newTemplate.name}
+                        onChange={(e) => setNewTemplate(prev => ({ ...prev, name: e.target.value }))}
+                        placeholder="Custom name for this template"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Template Name (Optional)
-                    </label>
-                    <input
-                      type="text"
-                      value={newTemplate.name}
-                      onChange={(e) => setNewTemplate(prev => ({ ...prev, name: e.target.value }))}
-                      placeholder="Custom name for this template"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                  <div className="flex items-end">
+                  <div className="flex justify-end">
                     <button 
                       onClick={handleAddTemplate}
                       disabled={loading}
-                      className={`px-4 py-2 rounded-lg transition-colors ${
+                      className={`w-full md:w-auto px-4 py-2 rounded-lg transition-colors ${
                         loading
                           ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                           : 'bg-blue-600 text-white hover:bg-blue-700'
@@ -541,39 +562,41 @@ export function SettingsTabs() {
                 <div className="space-y-3">
                   {templates.length > 0 ? (
                     templates.map((template) => (
-                      <div key={template.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3">
-                            <span className="font-medium text-gray-900">{template.name}</span>
-                            <span className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">
-                              ID: {template.templateId}
-                            </span>
+                      <div key={template.id} className="p-4 bg-gray-50 rounded-lg border">
+                        <div className="space-y-3">
+                          <div>
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
+                              <span className="font-medium text-gray-900">{template.name}</span>
+                              <span className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full w-fit">
+                                ID: {template.templateId}
+                              </span>
+                            </div>
+                            <div className="text-sm text-gray-600">
+                              Last synced: {template.lastSynced}
+                            </div>
                           </div>
-                          <div className="text-sm text-gray-600 mt-1">
-                            Last synced: {template.lastSynced}
+                          <div className="flex flex-col sm:flex-row gap-2">
+                            <button 
+                              onClick={() => handleSyncTemplate(template.id)}
+                              disabled={loading}
+                              className={`px-3 py-2 text-sm font-medium rounded-lg border ${
+                                loading
+                                  ? 'text-gray-400 cursor-not-allowed border-gray-300'
+                                  : 'text-blue-600 hover:text-blue-700 border-blue-200 hover:bg-blue-50'
+                              }`}
+                            >
+                              {loading ? 'Syncing...' : 'Sync'}
+                            </button>
+                            <button className="px-3 py-2 text-sm text-gray-600 hover:text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50">
+                              Edit
+                            </button>
+                            <button 
+                              onClick={() => handleDeleteTemplate(template.id)}
+                              className="px-3 py-2 text-sm text-red-600 hover:text-red-700 border border-red-200 rounded-lg hover:bg-red-50"
+                            >
+                              Delete
+                            </button>
                           </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <button 
-                            onClick={() => handleSyncTemplate(template.id)}
-                            disabled={loading}
-                            className={`px-3 py-1 text-sm font-medium ${
-                              loading
-                                ? 'text-gray-400 cursor-not-allowed'
-                                : 'text-blue-600 hover:text-blue-700'
-                            }`}
-                          >
-                            {loading ? 'Syncing...' : 'Sync'}
-                          </button>
-                          <button className="px-3 py-1 text-sm text-gray-600 hover:text-gray-700">
-                            Edit
-                          </button>
-                          <button 
-                            onClick={() => handleDeleteTemplate(template.id)}
-                            className="px-3 py-1 text-sm text-red-600 hover:text-red-700"
-                          >
-                            Delete
-                          </button>
                         </div>
                       </div>
                     ))
@@ -592,14 +615,14 @@ export function SettingsTabs() {
 
             {/* Sync All Button */}
             {templates.length > 0 && (
-              <div className="flex justify-between items-center">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
                 <div className="text-sm text-gray-600">
                   Templates will automatically sync with HaloPSA to fetch latest ticket details
                 </div>
                 <button 
                   onClick={handleSyncAllTemplates}
                   disabled={loading}
-                  className={`px-4 py-2 rounded-lg transition-colors ${
+                  className={`w-full sm:w-auto px-4 py-2 rounded-lg transition-colors ${
                     loading
                       ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -626,36 +649,38 @@ export function SettingsTabs() {
                 <p className="text-sm text-gray-600">Enter a HaloPSA item ID to add to your available tools & licensing</p>
               </CardHeader>
               <CardContent>
-                <div className="flex gap-4">
-                  <div className="flex-1">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Item ID
-                    </label>
-                    <input
-                      type="text"
-                      value={newTool.itemId}
-                      onChange={(e) => setNewTool(prev => ({ ...prev, itemId: e.target.value }))}
-                      placeholder="Enter HaloPSA item ID (e.g., 456)"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Item ID
+                      </label>
+                      <input
+                        type="text"
+                        value={newTool.itemId}
+                        onChange={(e) => setNewTool(prev => ({ ...prev, itemId: e.target.value }))}
+                        placeholder="Enter HaloPSA item ID (e.g., 456)"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Item Name (Optional)
+                      </label>
+                      <input
+                        type="text"
+                        value={newTool.name}
+                        onChange={(e) => setNewTool(prev => ({ ...prev, name: e.target.value }))}
+                        placeholder="Custom name for this item"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Item Name (Optional)
-                    </label>
-                    <input
-                      type="text"
-                      value={newTool.name}
-                      onChange={(e) => setNewTool(prev => ({ ...prev, name: e.target.value }))}
-                      placeholder="Custom name for this item"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                  <div className="flex items-end">
+                  <div className="flex justify-end">
                     <button 
                       onClick={handleAddTool}
                       disabled={loading}
-                      className={`px-4 py-2 rounded-lg transition-colors ${
+                      className={`w-full md:w-auto px-4 py-2 rounded-lg transition-colors ${
                         loading
                           ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                           : 'bg-blue-600 text-white hover:bg-blue-700'
@@ -678,40 +703,42 @@ export function SettingsTabs() {
                 <div className="space-y-3">
                   {tools.length > 0 ? (
                     tools.map((tool) => (
-                      <div key={tool.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3">
-                            <span className="font-medium text-gray-900">{tool.name}</span>
-                            <span className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">
-                              ID: {tool.itemId}
-                            </span>
+                      <div key={tool.id} className="p-4 bg-gray-50 rounded-lg border">
+                        <div className="space-y-3">
+                          <div>
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
+                              <span className="font-medium text-gray-900">{tool.name}</span>
+                              <span className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full w-fit">
+                                ID: {tool.itemId}
+                              </span>
+                            </div>
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm text-gray-600">
+                              <span>Price: ${tool.price.toFixed(2)}</span>
+                              <span>Last synced: {tool.lastSynced}</span>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-4 text-sm text-gray-600 mt-1">
-                            <span>Price: ${tool.price.toFixed(2)}</span>
-                            <span>Last synced: {tool.lastSynced}</span>
+                          <div className="flex flex-col sm:flex-row gap-2">
+                            <button 
+                              onClick={() => handleSyncTool(tool.id)}
+                              disabled={loading}
+                              className={`px-3 py-2 text-sm font-medium rounded-lg border ${
+                                loading
+                                  ? 'text-gray-400 cursor-not-allowed border-gray-300'
+                                  : 'text-blue-600 hover:text-blue-700 border-blue-200 hover:bg-blue-50'
+                              }`}
+                            >
+                              {loading ? 'Syncing...' : 'Sync'}
+                            </button>
+                            <button className="px-3 py-2 text-sm text-gray-600 hover:text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50">
+                              Edit
+                            </button>
+                            <button 
+                              onClick={() => handleDeleteTool(tool.id)}
+                              className="px-3 py-2 text-sm text-red-600 hover:text-red-700 border border-red-200 rounded-lg hover:bg-red-50"
+                            >
+                              Delete
+                            </button>
                           </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <button 
-                            onClick={() => handleSyncTool(tool.id)}
-                            disabled={loading}
-                            className={`px-3 py-1 text-sm font-medium ${
-                              loading
-                                ? 'text-gray-400 cursor-not-allowed'
-                                : 'text-blue-600 hover:text-blue-700'
-                            }`}
-                          >
-                            {loading ? 'Syncing...' : 'Sync'}
-                          </button>
-                          <button className="px-3 py-1 text-sm text-gray-600 hover:text-gray-700">
-                            Edit
-                          </button>
-                          <button 
-                            onClick={() => handleDeleteTool(tool.id)}
-                            className="px-3 py-1 text-sm text-red-600 hover:text-red-700"
-                          >
-                            Delete
-                          </button>
                         </div>
                       </div>
                     ))
@@ -730,14 +757,14 @@ export function SettingsTabs() {
 
             {/* Sync All Button */}
             {tools.length > 0 && (
-              <div className="flex justify-between items-center">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
                 <div className="text-sm text-gray-600">
                   Items will automatically sync with HaloPSA to fetch latest pricing and details
                 </div>
                 <button 
                   onClick={handleSyncAllTools}
                   disabled={loading}
-                  className={`px-4 py-2 rounded-lg transition-colors ${
+                  className={`w-full sm:w-auto px-4 py-2 rounded-lg transition-colors ${
                     loading
                       ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -783,7 +810,8 @@ export function SettingsTabs() {
                 <CardTitle className="text-lg">Labor Rate Configuration</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="overflow-x-auto">
+                {/* Desktop Table */}
+                <div className="hidden md:block overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-gray-200">
@@ -832,6 +860,48 @@ export function SettingsTabs() {
                       </tr>
                     </tbody>
                   </table>
+                </div>
+
+                {/* Mobile Cards */}
+                <div className="md:hidden space-y-4">
+                  {[
+                    { level: 'Level 1', costRate: '22.00', businessHours: '155.00', afterHours: '155.00' },
+                    { level: 'Level 2', costRate: '37.00', businessHours: '185.00', afterHours: '275.00' },
+                    { level: 'Level 3', costRate: '46.00', businessHours: '275.00', afterHours: '375.00' }
+                  ].map((item, index) => (
+                    <div key={index} className="bg-gray-50 rounded-lg p-4 space-y-3">
+                      <h4 className="font-medium text-gray-900">{item.level}</h4>
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">Cost Rate</label>
+                          <input 
+                            type="number" 
+                            step="0.01" 
+                            defaultValue={item.costRate} 
+                            className="w-full px-2 py-1 text-center border border-gray-300 rounded" 
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">Business Hours Price</label>
+                          <input 
+                            type="number" 
+                            step="0.01" 
+                            defaultValue={item.businessHours} 
+                            className="w-full px-2 py-1 text-center border border-gray-300 rounded" 
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">After Hours Price</label>
+                          <input 
+                            type="number" 
+                            step="0.01" 
+                            defaultValue={item.afterHours} 
+                            className="w-full px-2 py-1 text-center border border-gray-300 rounded" 
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
                 <div className="mt-4 flex justify-end">
                   <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">

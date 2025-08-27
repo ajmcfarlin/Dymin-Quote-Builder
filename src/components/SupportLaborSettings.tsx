@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { DEFAULT_DEVICES } from '@/lib/defaultSupportDevices'
+import { toast } from 'sonner'
 
 interface SupportDevice {
   id: string
@@ -149,10 +150,10 @@ export function SupportLaborSettings() {
       
       await Promise.all(savePromises)
       setHasChanges(false)
-      alert('Support labor settings saved successfully!')
+      toast.success('Support labor settings saved successfully!')
     } catch (error) {
       console.error('Error saving devices:', error)
-      alert('Failed to save changes. Please try again.')
+      toast.error('Failed to save changes. Please try again.')
     } finally {
       setSaving(false)
     }
@@ -176,10 +177,10 @@ export function SupportLaborSettings() {
       // Reload devices from database
       await loadDevices()
       setHasChanges(false)
-      alert('Settings reset to defaults successfully!')
+      toast.success('Settings reset to defaults successfully!')
     } catch (error) {
       console.error('Error resetting to defaults:', error)
-      alert('Failed to reset to defaults. Please try again.')
+      toast.error('Failed to reset to defaults. Please try again.')
     } finally {
       setSaving(false)
     }
@@ -390,7 +391,6 @@ export function SupportLaborSettings() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4" />
               </svg>
               <p className="text-lg font-medium">Select a device type above to configure its support hours</p>
-              <p className="text-sm mt-1">Choose from servers, users, cloud services, or infrastructure devices</p>
             </div>
           </CardContent>
         </Card>

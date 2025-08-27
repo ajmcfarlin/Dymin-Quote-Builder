@@ -16,7 +16,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       
       <div className="flex-1 flex flex-col overflow-hidden relative z-10">
         {/* Top bar */}
-        <header className="bg-white shadow-sm border-b border-gray-200 lg:hidden">
+        <header className="shadow-sm border-b border-gray-200 lg:hidden" style={{ backgroundColor: '#343333' }} >
           <div className="flex items-center justify-between h-16 px-4">
             <img 
               src="/dymin.webp" 
@@ -27,7 +27,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               onClick={() => setSidebarOpen(true)}
               className="p-3 rounded-md text-gray-600 hover:text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200 hover:scale-110"
             >
-              <div className="flex flex-col space-y-1.5">
+              <div className="flex flex-col space-y-1.5 text-white">
                 <span className={`block h-0.5 w-6 bg-current transition-all duration-300 ${sidebarOpen ? 'rotate-45 translate-y-2' : ''}`}></span>
                 <span className={`block h-0.5 w-6 bg-current transition-all duration-300 ${sidebarOpen ? 'opacity-0' : ''}`}></span>
                 <span className={`block h-0.5 w-6 bg-current transition-all duration-300 ${sidebarOpen ? '-rotate-45 -translate-y-2' : ''}`}></span>
