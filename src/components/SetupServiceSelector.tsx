@@ -17,6 +17,12 @@ interface SetupServiceSelectorProps {
 export function SetupServiceSelector({ setupServices, customer, upfrontPayment = 0, onChange, onUpfrontPaymentChange }: SetupServiceSelectorProps) {
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set())
 
+  const handleNumberInputFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    if (e.target.value === '0') {
+      e.target.select()
+    }
+  }
+
   const toggleCardExpansion = (serviceId: string) => {
     const newExpanded = new Set(expandedCards)
     if (newExpanded.has(serviceId)) {
@@ -419,6 +425,7 @@ export function SetupServiceSelector({ setupServices, customer, upfrontPayment =
                   step="0.01"
                   value={upfrontPayment}
                   onChange={(e) => onUpfrontPaymentChange?.(parseFloat(e.target.value) || 0)}
+                  onFocus={handleNumberInputFocus}
                   className="w-full px-3 py-2 text-sm border border-gray-300 rounded bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   placeholder="0.00"
                 />

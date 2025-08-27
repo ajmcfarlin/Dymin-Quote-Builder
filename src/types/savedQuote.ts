@@ -88,6 +88,7 @@ export interface QuoteListItem {
   customerName: string
   monthlyTotal: number
   contractTotal: number
+  contractMonths: number
   createdAt: Date
   updatedAt: Date
   user?: {

@@ -16,6 +16,13 @@ export function MonthlyServicesSelector({ monthlyServices, customer, onChange }:
   const [showAddForm, setShowAddForm] = useState(false)
   const [expandedTools, setExpandedTools] = useState<Set<string>>(new Set())
 
+  // Helper function to handle focus on number inputs with zero values
+  const handleNumberInputFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    if (e.target.value === '0') {
+      e.target.select()
+    }
+  }
+
   const toggleToolExpansion = (toolId: string) => {
     const newExpanded = new Set(expandedTools)
     if (newExpanded.has(toolId)) {
@@ -236,6 +243,7 @@ export function MonthlyServicesSelector({ monthlyServices, customer, onChange }:
                               min="0"
                               value={tool.nodesUnitsSupported}
                               onChange={(e) => updateVariableTool(tool.id, { nodesUnitsSupported: parseInt(e.target.value) || 0 })}
+                              onFocus={handleNumberInputFocus}
                               className="w-16 px-2 py-1 text-center text-sm border border-gray-300 rounded"
                             />
                           ) : (
