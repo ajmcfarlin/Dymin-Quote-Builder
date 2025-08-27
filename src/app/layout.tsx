@@ -16,6 +16,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Dymin Quote Calculator",
   description: "Professional IT managed services quote calculator",
+  viewport: "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no",
   robots: {
     index: false,
     follow: false,
