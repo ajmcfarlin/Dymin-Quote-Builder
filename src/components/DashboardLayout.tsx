@@ -11,12 +11,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   return (
-    <div className="h-screen bg-gray-50 flex overflow-hidden">
+    <div className="min-h-screen lg:h-screen bg-gray-50 flex lg:overflow-hidden">
       <Sidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
       
-      <div className="flex-1 flex flex-col overflow-hidden relative z-10">
+      <div className="flex-1 flex flex-col lg:overflow-hidden relative z-10">
         {/* Top bar */}
-        <header className="shadow-sm border-b border-gray-200 lg:hidden" style={{ backgroundColor: '#343333' }} >
+        <header className="sticky top-0 shadow-sm border-b border-gray-200 lg:hidden z-50" style={{ backgroundColor: '#343333' }} >
           <div className="flex items-center justify-between h-16 px-4">
             <img 
               src="/dymin.webp" 
@@ -37,7 +37,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         </header>
 
         {/* Main content */}
-        <main className="flex-1 overflow-auto">
+        <main className="flex-1 lg:overflow-auto">
           {children}
         </main>
       </div>
