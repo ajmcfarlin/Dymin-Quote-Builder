@@ -120,19 +120,21 @@ export function CustomerForm({ value, onChange }: CustomerFormProps) {
             />
           </div>
 
-          {/* Desktop: All fields in 2-column grid */}
-          <div className="hidden md:grid md:grid-cols-2 md:gap-4">
+          {/* Company info fields - responsive single layout */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input
               label="Company Name"
               {...register('companyName')}
               placeholder="Enter company name"
+              className="md:col-span-1"
             />
             <Input
               label="Address"
               {...register('address')}
               placeholder="Enter address"
+              className="md:col-span-1"
             />
-            <div className="space-y-2">
+            <div className="space-y-2 md:col-span-1">
               <label className="text-sm font-medium text-gray-700">Region</label>
               <select
                 {...register('region')}
@@ -142,7 +144,7 @@ export function CustomerForm({ value, onChange }: CustomerFormProps) {
                 <option value="Canada">Canada</option>
               </select>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-2 md:col-span-1">
               <label className="text-sm font-medium text-gray-700">Contract Type</label>
               <select
                 {...register('contractType')}
@@ -158,95 +160,19 @@ export function CustomerForm({ value, onChange }: CustomerFormProps) {
               {...register('contractMonths', { valueAsNumber: true })}
               min="12"
               max="60"
+              className="md:col-span-1"
             />
             <Input
               label="Full Users"
               type="number"
               {...register('users.full', { valueAsNumber: true })}
               min="0"
-            />
-            <Input
-              label="Email Only Users"
-              type="number"
-              {...register('users.emailOnly', { valueAsNumber: true })}
-              min="0"
-            />
-            <Input
-              label="Workstations"
-              type="number"
-              {...register('infrastructure.workstations', { valueAsNumber: true })}
-              min="0"
-            />
-            <Input
-              label="Servers"
-              type="number"
-              {...register('infrastructure.servers', { valueAsNumber: true })}
-              min="0"
-            />
-            <Input
-              label="Printers"
-              type="number"
-              {...register('infrastructure.printers', { valueAsNumber: true })}
-              min="0"
-            />
-            <Input
-              label="Phone Extensions"
-              type="number"
-              {...register('infrastructure.phoneExtensions', { valueAsNumber: true })}
-              min="0"
-            />
-            <Input
-              label="WiFi Access Points"
-              type="number"
-              {...register('infrastructure.wifiAccessPoints', { valueAsNumber: true })}
-              min="0"
-            />
-            <Input
-              label="Firewalls"
-              type="number"
-              {...register('infrastructure.firewalls', { valueAsNumber: true })}
-              min="0"
-            />
-            <Input
-              label="Switches"
-              type="number"
-              {...register('infrastructure.switches', { valueAsNumber: true })}
-              min="0"
-            />
-            <Input
-              label="UPS"
-              type="number"
-              {...register('infrastructure.ups', { valueAsNumber: true })}
-              min="0"
-            />
-            <Input
-              label="NAS"
-              type="number"
-              {...register('infrastructure.nas', { valueAsNumber: true })}
-              min="0"
-            />
-            <Input
-              label="Managed Mobile Devices"
-              type="number"
-              {...register('infrastructure.managedMobileDevices', { valueAsNumber: true })}
-              min="0"
-            />
-            <Input
-              label="Domains Used for Email"
-              type="number"
-              {...register('infrastructure.domainsUsedForEmail', { valueAsNumber: true })}
-              min="0"
+              className="md:col-span-1"
             />
           </div>
           
-          {/* Mobile: User and infrastructure fields - 2-column grid */}
-          <div className="md:hidden grid grid-cols-2 gap-4">
-            <Input
-              label="Full Users"
-              type="number"
-              {...register('users.full', { valueAsNumber: true })}
-              min="0"
-            />
+          {/* User and infrastructure fields - responsive 2-column grid */}
+          <div className="grid grid-cols-2 gap-4">
             <Input
               label="Email Only Users"
               type="number"
