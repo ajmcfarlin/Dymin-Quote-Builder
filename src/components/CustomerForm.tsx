@@ -79,47 +79,6 @@ export function CustomerForm({ value, onChange }: CustomerFormProps) {
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {/* Mobile: Company info fields full width, then 2-column for the rest */}
-          <div className="md:hidden space-y-4">
-            <Input
-              label="Company Name"
-              {...register('companyName')}
-              placeholder="Enter company name"
-            />
-            <Input
-              label="Address"
-              {...register('address')}
-              placeholder="Enter address"
-            />
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">Region</label>
-              <select
-                {...register('region')}
-                className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="United States">United States</option>
-                <option value="Canada">Canada</option>
-              </select>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">Contract Type</label>
-              <select
-                {...register('contractType')}
-                className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="Managed Services">Managed Services</option>
-                <option value="Co-Managed Services">Co-Managed Services</option>
-              </select>
-            </div>
-            <Input
-              label="Contract Length (Months)"
-              type="number"
-              {...register('contractMonths', { valueAsNumber: true })}
-              min="12"
-              max="60"
-            />
-          </div>
-
           {/* Company info fields - responsive single layout */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input
