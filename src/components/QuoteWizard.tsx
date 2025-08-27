@@ -10,6 +10,7 @@ import { OtherLaborSelector } from './OtherLaborSelector'
 import { ReviewDiscountTab } from './ReviewDiscountTab'
 import { useQuote, useQuoteUI, useQuoteCustomer, useQuoteCalculations } from '@/contexts/QuoteContext'
 import { calculateSupportDevicesLabor, calculateSetupCosts, DEFAULT_LABOR_RATES } from '@/lib/calculations'
+import { Building2, Settings, Users, Wrench, Receipt, ChevronDown, Menu, Package, HardDrive, UserCog } from 'lucide-react'
 
 interface QuoteWizardProps {
   readOnly?: boolean
@@ -21,6 +22,12 @@ export function QuoteWizard({ readOnly = false, editMode = false, quoteId }: Quo
   // Use context hooks instead of local state
   const { state, updateSetupServices, updateMonthlyServices, updateSupportDevices, updateOtherLaborData, updateUpfrontPayment, initialQuote } = useQuote()
   const { currentStep, currentMonthlyTab, quoteSummaryExpanded, setCurrentStep, setCurrentMonthlyTab, setQuoteSummaryExpanded } = useQuoteUI()
+
+  const scrollToTop = () => {
+    if (mainContentRef.current) {
+      mainContentRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }
   const { customer, updateCustomer } = useQuoteCustomer()
   const calculations = useQuoteCalculations()
   
@@ -63,7 +70,7 @@ export function QuoteWizard({ readOnly = false, editMode = false, quoteId }: Quo
   const canProceedToStep2 = true // Allow proceeding to monthly services anytime
 
   return (
-    <div className="flex flex-col lg:flex-row gap-8">
+    <div className="flex flex-col lg:flex-row gap-4 lg:gap-8">
       {/* Main Content */}
       <div className="flex-1 min-w-0 order-1" ref={mainContentRef}>
         {/* Step Navigation */}
@@ -85,22 +92,28 @@ export function QuoteWizard({ readOnly = false, editMode = false, quoteId }: Quo
           </div>
         </div>
 
-        <nav className="flex space-x-8">
+        <nav className="flex sm:space-x-8 space-x-0">
           <button
             onClick={() => setCurrentStep(1)}
-            className={`pb-2 border-b-2 font-medium text-sm flex items-center cursor-pointer ${
+            className={`pb-2 border-b-2 font-medium text-sm flex items-center cursor-pointer flex-1 sm:flex-none justify-center sm:justify-start ${
               currentStep === 1
                 ? 'border-transparent text-gray-500 hover:text-gray-700'
                 : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
             style={currentStep === 1 ? { borderBottomColor: '#15bef0', color: '#0891b2' } : {}}
           >
-            Customer Info & Setup Services
+            <Building2 size={18} className="mr-2" />
+            <span className="hidden sm:inline">Customer Info & Setup Services</span>
+            <span className="sm:hidden">Setup</span>
           </button>
           <button
-            onClick={() => canProceedToStep2 && setCurrentStep(2)}
+            onClick={() => {
+              if (canProceedToStep2) {
+                setCurrentStep(2)
+              }
+            }}
             disabled={!canProceedToStep2}
-            className={`pb-2 border-b-2 font-medium text-sm flex items-center ${
+            className={`pb-2 border-b-2 font-medium text-sm flex items-center flex-1 sm:flex-none justify-center sm:justify-start ${
               currentStep === 2
                 ? 'text-gray-500 hover:text-gray-700 cursor-pointer'
                 : canProceedToStep2
@@ -109,19 +122,23 @@ export function QuoteWizard({ readOnly = false, editMode = false, quoteId }: Quo
             }`}
             style={currentStep === 2 ? { borderBottomColor: '#15bef0', color: '#0891b2' } : {}}
           >
-            Monthly Managed Services
+            <Settings size={18} className="mr-2" />
+            <span className="hidden sm:inline">Monthly Managed Services</span>
+            <span className="sm:hidden">Services</span>
           </button>
           
           <button
             onClick={() => setCurrentStep(3)}
-            className={`pb-2 border-b-2 font-medium text-sm flex items-center ${
+            className={`pb-2 border-b-2 font-medium text-sm flex items-center flex-1 sm:flex-none justify-center sm:justify-start ${
               currentStep === 3
                 ? 'text-gray-500 hover:text-gray-700 cursor-pointer'
                 : 'border-transparent text-gray-500 hover:text-gray-700 cursor-pointer'
             }`}
             style={currentStep === 3 ? { borderBottomColor: '#15bef0', color: '#0891b2' } : {}}
           >
-            Review & Discount
+            <Receipt size={18} className="mr-2" />
+            <span className="hidden sm:inline">Review & Discount</span>
+            <span className="sm:hidden">Review</span>
           </button>
         </nav>
       </div>
@@ -141,7 +158,10 @@ export function QuoteWizard({ readOnly = false, editMode = false, quoteId }: Quo
           {/* Continue Button */}
           <div className="flex justify-end">
             <button
-              onClick={() => setCurrentStep(2)}
+              onClick={() => {
+                setCurrentStep(2)
+                scrollToTop()
+              }}
               disabled={!canProceedToStep2}
               className={`px-6 py-2 rounded-lg font-medium ${
                 canProceedToStep2
@@ -150,7 +170,7 @@ export function QuoteWizard({ readOnly = false, editMode = false, quoteId }: Quo
               }`}
               style={canProceedToStep2 ? { backgroundColor: '#15bef0' } : {}}
             >
-              Continue to Monthly Services →
+              Continue
             </button>
           </div>
         </div>
@@ -164,36 +184,42 @@ export function QuoteWizard({ readOnly = false, editMode = false, quoteId }: Quo
             <nav className="-mb-px flex space-x-8">
               <button
                 onClick={() => setCurrentMonthlyTab('tools')}
-                className={`py-2 px-1 border-b-2 font-medium text-sm cursor-pointer ${
+                className={`py-2 px-1 border-b-2 font-medium text-sm cursor-pointer flex items-center ${
                   currentMonthlyTab === 'tools'
                     ? 'text-white'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
                 style={currentMonthlyTab === 'tools' ? { borderBottomColor: '#15bef0', color: '#0891b2' } : {}}
               >
-                <span className="w-4 inline-block text-center mr-2">◈</span>Tools & Licensing
+                <Wrench size={16} className="mr-2" />
+                <span className="hidden sm:inline">Tools & Licensing</span>
+                <span className="sm:hidden">Tools</span>
               </button>
               <button
                 onClick={() => setCurrentMonthlyTab('support')}
-                className={`py-2 px-1 border-b-2 font-medium text-sm cursor-pointer ${
+                className={`py-2 px-1 border-b-2 font-medium text-sm cursor-pointer flex items-center ${
                   currentMonthlyTab === 'support'
                     ? 'text-white'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
                 style={currentMonthlyTab === 'support' ? { borderBottomColor: '#15bef0', color: '#0891b2' } : {}}
               >
-                <span className="w-4 inline-block text-center mr-2">●</span>Support Labor
+                <UserCog size={16} className="mr-2" />
+                <span className="hidden sm:inline">Support Labor</span>
+                <span className="sm:hidden">Support</span>
               </button>
               <button
                 onClick={() => setCurrentMonthlyTab('other')}
-                className={`py-2 px-1 border-b-2 font-medium text-sm cursor-pointer ${
+                className={`py-2 px-1 border-b-2 font-medium text-sm cursor-pointer flex items-center ${
                   currentMonthlyTab === 'other'
                     ? 'text-white'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
                 style={currentMonthlyTab === 'other' ? { borderBottomColor: '#15bef0', color: '#0891b2' } : {}}
               >
-                <span className="w-4 inline-block text-center mr-2">⬢</span>Other Labor
+                <Package size={16} className="mr-2" />
+                <span className="hidden sm:inline">Other Labor</span>
+                <span className="sm:hidden">Other</span>
               </button>
             </nav>
           </div>
@@ -229,51 +255,69 @@ export function QuoteWizard({ readOnly = false, editMode = false, quoteId }: Quo
             {/* Left button - Back to Setup or Previous Tab */}
             {currentMonthlyTab === 'tools' ? (
               <button
-                onClick={() => setCurrentStep(1)}
+                onClick={() => {
+                  setCurrentStep(1)
+                  scrollToTop()
+                }}
                 className="px-6 py-2 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 cursor-pointer"
               >
-                ← Back to Setup Services
+                Back
               </button>
             ) : currentMonthlyTab === 'support' ? (
               <button
-                onClick={() => setCurrentMonthlyTab('tools')}
+                onClick={() => {
+                  setCurrentMonthlyTab('tools')
+                  scrollToTop()
+                }}
                 className="px-6 py-2 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 cursor-pointer"
               >
-                ← Back to Tools & Licensing
+                Back
               </button>
             ) : (
               <button
-                onClick={() => setCurrentMonthlyTab('support')}
+                onClick={() => {
+                  setCurrentMonthlyTab('support')
+                  scrollToTop()
+                }}
                 className="px-6 py-2 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 cursor-pointer"
               >
-                ← Back to Support Labor
+                Back
               </button>
             )}
 
             {/* Right button - Next Tab or Review */}
             {currentMonthlyTab === 'tools' ? (
               <button 
-                onClick={() => setCurrentMonthlyTab('support')}
+                onClick={() => {
+                  setCurrentMonthlyTab('support')
+                  scrollToTop()
+                }}
                 className="px-6 py-2 text-white rounded-lg font-medium hover:opacity-90 cursor-pointer"
                 style={{ backgroundColor: '#15bef0' }}
               >
-                Continue to Support Labor →
+                Continue
               </button>
             ) : currentMonthlyTab === 'support' ? (
               <button 
-                onClick={() => setCurrentMonthlyTab('other')}
+                onClick={() => {
+                  setCurrentMonthlyTab('other')
+                  scrollToTop()
+                }}
                 className="px-6 py-2 text-white rounded-lg font-medium hover:opacity-90 cursor-pointer"
                 style={{ backgroundColor: '#15bef0' }}
               >
-                Continue to Other Labor →
+                Continue
               </button>
             ) : (
               <button 
-                onClick={() => setCurrentStep(3)}
+                onClick={() => {
+                  setCurrentStep(3)
+                  scrollToTop()
+                }}
                 className="px-6 py-2 text-white rounded-lg font-medium hover:opacity-90 cursor-pointer"
                 style={{ backgroundColor: '#15bef0' }}
               >
-                Review & Finalize →
+                Finalize
               </button>
             )}
           </div>
@@ -297,7 +341,7 @@ export function QuoteWizard({ readOnly = false, editMode = false, quoteId }: Quo
       )}
       </div>
 
-      {/* Quote Summary - Hidden on Review tab, visible on others */}
+      {/* Quote Summary - Gently transitions on Review tab */}
       <div className={`flex-shrink-0 order-2 transition-all duration-500 ease-in-out ${
         currentStep === 3 
           ? 'w-0 lg:translate-x-full opacity-0 pointer-events-none overflow-hidden' 

@@ -5,6 +5,7 @@ import { CustomerInfo, QuoteCalculation } from '@/types/quote'
 import { QuoteAPI, stateToCreateQuoteRequest } from '@/lib/quoteApi'
 import { useRouter } from 'next/navigation'
 import { useQuote } from '@/contexts/QuoteContext'
+import { toast } from 'sonner'
 
 interface ReviewDiscountTabProps {
   calculations?: QuoteCalculation
@@ -68,7 +69,27 @@ export function ReviewDiscountTab({ calculations, customer, supportDevices, mont
         return originalTotal
       case 'per_user':
         const fullUsers = calculations.customer.users.full || 0
-        return discountValue > 0 && fullUsers > 0 ? discountValue * fullUsers : originalTotal
+        if (discountValue > 0 && fullUsers > 0) {
+          // Per user discount targets only Support Labor + Deferred Setup, not tools
+          const supportAndSetupOriginal = (totals?.supportLabor || 0) + (totals?.deferredSetupMonthly || 0)
+          const targetSupportAndSetup = discountValue * fullUsers
+          const toolsCosts = (totals?.toolsSoftware || 0) + (totals?.otherLabor || 0)
+          const newMonthlyTotal = targetSupportAndSetup + toolsCosts
+          
+          console.log('Per user discount calculation:', { 
+            discountValue, 
+            fullUsers, 
+            supportAndSetupOriginal,
+            targetSupportAndSetup,
+            toolsCosts,
+            originalTotal,
+            newMonthlyTotal,
+            pricePerUserBefore: supportAndSetupOriginal / fullUsers,
+            pricePerUserAfter: targetSupportAndSetup / fullUsers
+          })
+          return newMonthlyTotal
+        }
+        return originalTotal
       case 'override':
         return discountValue > 0 ? discountValue : originalTotal
       default:
@@ -113,23 +134,42 @@ export function ReviewDiscountTab({ calculations, customer, supportDevices, mont
   const laborHours = calculateLaborHours()
   const originalTotal = totals?.monthlyTotal || 0
   const discountedTotal = calculateDiscountedTotal(originalTotal)
-  const totalUsers = customer.users.full || 0
+  const fullUsers = customer.users.full || 0
+  const totalUsers = fullUsers + (customer.users.emailOnly || 0)
+  
+  // For per user discount, use only full users for calculations and display
+  const usersForPricing = discountType === 'per_user' ? fullUsers : totalUsers
   
   // Calculate proportional discounts for each component
   const hasDiscount = discountType !== 'none' && discountValue > 0
   const totalDiscountAmount = hasDiscount ? originalTotal - discountedTotal : 0
   
-  const calculateDiscountedComponent = (componentPrice: number) => {
+  const calculateDiscountedComponent = (componentPrice: number, componentType?: string) => {
     if (!hasDiscount || originalTotal === 0) return componentPrice
+    
+    // For per_user discount, handle support labor and setup differently
+    if (discountType === 'per_user') {
+      if (componentType === 'supportLabor' || componentType === 'deferredSetup') {
+        // These components are adjusted to hit the target per-user price
+        const supportAndSetupOriginal = (totals?.supportLabor || 0) + (totals?.deferredSetupMonthly || 0)
+        const targetSupportAndSetup = discountValue * fullUsers
+        if (supportAndSetupOriginal > 0) {
+          return componentPrice * (targetSupportAndSetup / supportAndSetupOriginal)
+        }
+      }
+      // Tools and other components remain unchanged for per_user discount
+      return componentPrice
+    }
+    
     const weighting = componentPrice / originalTotal
     const componentDiscount = totalDiscountAmount * weighting
     return componentPrice - componentDiscount
   }
   
-  const discountedTools = calculateDiscountedComponent(totals?.toolsSoftware || 0)
-  const discountedSupportLabor = calculateDiscountedComponent(totals?.supportLabor || 0)
-  const discountedOtherLabor = calculateDiscountedComponent(totals?.otherLabor || 0)
-  const discountedSetup = calculateDiscountedComponent(totals?.deferredSetupMonthly || 0)
+  const discountedTools = calculateDiscountedComponent(totals?.toolsSoftware || 0, 'tools')
+  const discountedSupportLabor = calculateDiscountedComponent(totals?.supportLabor || 0, 'supportLabor')
+  const discountedOtherLabor = calculateDiscountedComponent(totals?.otherLabor || 0, 'otherLabor')
+  const discountedSetup = calculateDiscountedComponent(totals?.deferredSetupMonthly || 0, 'deferredSetup')
 
   // Calculate actual margins based on cost vs price data
   const calculateMargins = () => {
@@ -171,7 +211,7 @@ export function ReviewDiscountTab({ calculations, customer, supportDevices, mont
   // Generate/Update quote function
   const handleGenerateQuote = async () => {
     if (!customer?.companyName?.trim()) {
-      alert('Please enter a company name before ' + (editMode ? 'updating' : 'generating') + ' the quote.')
+      toast.error('Please enter a company name before ' + (editMode ? 'updating' : 'generating') + ' the quote.')
       return
     }
 
@@ -210,26 +250,26 @@ export function ReviewDiscountTab({ calculations, customer, supportDevices, mont
         }
         const updatedQuote = await QuoteAPI.updateQuote(updateRequest)
         
-        alert('✅ Quote updated successfully!')
+        toast.success('Quote updated successfully!')
         router.push(`/dashboard/quotes/${updatedQuote.id}`)
       } else {
         // Create new quote
         const request = stateToCreateQuoteRequest(quoteState, discountInfo)
         const savedQuote = await QuoteAPI.createQuote(request)
         
-        alert('✅ Quote generated successfully!')
+        toast.success('Quote generated successfully!')
         router.push(`/dashboard/quotes/${savedQuote.id}`)
       }
     } catch (error) {
       console.error('Error saving quote:', error)
-      alert('❌ Failed to ' + (editMode ? 'update' : 'generate') + ' quote. Please try again.')
+      toast.error('Failed to ' + (editMode ? 'update' : 'generate') + ' quote. Please try again.')
     } finally {
       setIsGenerating(false)
     }
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4">
       
       {/* Discount Controls */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -311,11 +351,11 @@ export function ReviewDiscountTab({ calculations, customer, supportDevices, mont
           <h3 className="text-lg font-semibold text-gray-900">Pricing Summary</h3>
         </div>
         
-        <div className="p-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 divide-x divide-gray-200">
+        <div className="p-4 md:p-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:divide-x lg:divide-gray-200">
             
             {/* Left Column */}
-            <div className="space-y-6 pr-8">
+            <div className="space-y-6 lg:pr-8">
               {/* Pricing Breakdown */}
               <div>
                 <h4 className="font-semibold text-gray-900 text-lg mb-4">Pricing Breakdown</h4>
@@ -402,12 +442,12 @@ export function ReviewDiscountTab({ calculations, customer, supportDevices, mont
                     <div className="text-right">
                       {hasDiscount ? (
                         <div>
-                          <span className="font-medium text-gray-500 line-through text-xs">{formatCurrency((totals?.supportLabor || 0) / Math.max(1, totalUsers))}</span>
+                          <span className="font-medium text-gray-500 line-through text-xs">{formatCurrency((totals?.supportLabor || 0) / Math.max(1, fullUsers))}</span>
                           <br />
-                          <span className="font-medium text-gray-900">{formatCurrency(discountedSupportLabor / Math.max(1, totalUsers))}</span>
+                          <span className="font-medium text-gray-900">{formatCurrency(discountedSupportLabor / Math.max(1, fullUsers))}</span>
                         </div>
                       ) : (
-                        <span className="font-medium text-gray-900">{formatCurrency((totals?.supportLabor || 0) / Math.max(1, totalUsers))}</span>
+                        <span className="font-medium text-gray-900">{formatCurrency((totals?.supportLabor || 0) / Math.max(1, fullUsers))}</span>
                       )}
                     </div>
                   </div>
@@ -416,12 +456,12 @@ export function ReviewDiscountTab({ calculations, customer, supportDevices, mont
                     <div className="text-right">
                       {hasDiscount ? (
                         <div>
-                          <span className="font-medium text-gray-500 line-through text-xs">{formatCurrency((totals?.deferredSetupMonthly || 0) / Math.max(1, totalUsers))}</span>
+                          <span className="font-medium text-gray-500 line-through text-xs">{formatCurrency((totals?.deferredSetupMonthly || 0) / Math.max(1, fullUsers))}</span>
                           <br />
-                          <span className="font-medium text-gray-900">{formatCurrency(discountedSetup / Math.max(1, totalUsers))}</span>
+                          <span className="font-medium text-gray-900">{formatCurrency(discountedSetup / Math.max(1, fullUsers))}</span>
                         </div>
                       ) : (
-                        <span className="font-medium text-gray-900">{formatCurrency((totals?.deferredSetupMonthly || 0) / Math.max(1, totalUsers))}</span>
+                        <span className="font-medium text-gray-900">{formatCurrency((totals?.deferredSetupMonthly || 0) / Math.max(1, fullUsers))}</span>
                       )}
                     </div>
                   </div>
@@ -430,12 +470,12 @@ export function ReviewDiscountTab({ calculations, customer, supportDevices, mont
                     <div className="text-right">
                       {hasDiscount ? (
                         <div>
-                          <span className="font-medium text-gray-500 line-through text-xs">{formatCurrency(((totals?.supportLabor || 0) + (totals?.deferredSetupMonthly || 0)) / Math.max(1, totalUsers))}</span>
+                          <span className="font-medium text-gray-500 line-through text-xs">{formatCurrency(((totals?.supportLabor || 0) + (totals?.deferredSetupMonthly || 0)) / Math.max(1, fullUsers))}</span>
                           <br />
-                          <span className="font-medium text-gray-900">{formatCurrency((discountedSupportLabor + discountedSetup) / Math.max(1, totalUsers))}</span>
+                          <span className="font-medium text-gray-900">{formatCurrency((discountedSupportLabor + discountedSetup) / Math.max(1, fullUsers))}</span>
                         </div>
                       ) : (
-                        <span className="text-gray-900">{formatCurrency(((totals?.supportLabor || 0) + (totals?.deferredSetupMonthly || 0)) / Math.max(1, totalUsers))}</span>
+                        <span className="text-gray-900">{formatCurrency(((totals?.supportLabor || 0) + (totals?.deferredSetupMonthly || 0)) / Math.max(1, fullUsers))}</span>
                       )}
                     </div>
                   </div>
@@ -522,7 +562,7 @@ export function ReviewDiscountTab({ calculations, customer, supportDevices, mont
             </div>
 
             {/* Right Column */}
-            <div className="space-y-6 pl-8">
+            <div className="space-y-6 lg:pl-8">
               {/* Profitability */}
               <div>
                 <h4 className="font-semibold text-gray-900 text-lg mb-4">Profitability</h4>

@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
-import { Info, Plus, Trash2 } from 'lucide-react'
+import { Info, Plus, Trash2, ChevronDown, ChevronRight } from 'lucide-react'
 import { MonthlyServicesData, VariableCostTool } from '@/types/monthlyServices'
 import { CustomerInfo } from '@/types/quote'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -14,6 +14,18 @@ interface MonthlyServicesSelectorProps {
 
 export function MonthlyServicesSelector({ monthlyServices, customer, onChange }: MonthlyServicesSelectorProps) {
   const [showAddForm, setShowAddForm] = useState(false)
+  const [expandedTools, setExpandedTools] = useState<Set<string>>(new Set())
+
+  const toggleToolExpansion = (toolId: string) => {
+    const newExpanded = new Set(expandedTools)
+    if (newExpanded.has(toolId)) {
+      newExpanded.delete(toolId)
+    } else {
+      newExpanded.add(toolId)
+    }
+    setExpandedTools(newExpanded)
+  }
+
   const [newItemName, setNewItemName] = useState('')
   const [newItemCost, setNewItemCost] = useState('')
   const [newItemPrice, setNewItemPrice] = useState('')
@@ -184,7 +196,8 @@ export function MonthlyServicesSelector({ monthlyServices, customer, onChange }:
             <p className="text-sm text-gray-600">Configure quantities and pricing for monthly tools and licensing</p>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-200">
@@ -355,6 +368,240 @@ export function MonthlyServicesSelector({ monthlyServices, customer, onChange }:
                   </tr>
                 </tbody>
               </table>
+            </div>
+
+            {/* Mobile Card View */}
+            <div className="md:hidden space-y-3">
+              {activeVariableTools.map((tool) => {
+                const isOptional = isOptionalTool(tool.id)
+                const isExpanded = expandedTools.has(tool.id)
+                
+                return (
+                  <Card key={tool.id} className="border border-gray-200">
+                    <CardHeader 
+                      className="py-3 cursor-pointer"
+                      onClick={() => toggleToolExpansion(tool.id)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="flex-shrink-0">
+                            {isExpanded ? <ChevronDown size={16} style={{ color: '#15bef0' }} /> : <ChevronRight size={16} style={{ color: '#15bef0' }} />}
+                          </div>
+                          <CardTitle className="text-sm">{tool.name}</CardTitle>
+                          <div className="relative group">
+                            <Info size={14} className="text-gray-400 hover:text-gray-600 cursor-help" />
+                            <div className="absolute bottom-full left-0 transform mb-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10 min-w-max">
+                              {getQuantityTooltip(tool.id)}
+                              <div className="absolute top-full left-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {!isExpanded && (
+                            <span className="text-sm font-semibold text-gray-900">
+                              {formatCurrency(tool.extendedPrice)}
+                            </span>
+                          )}
+                          {isCustomTool(tool.id) && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                removeCustomItem(tool.id)
+                              }}
+                              className="text-red-500 hover:text-red-700 transition-colors p-1"
+                              title="Remove custom item"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </CardHeader>
+                    
+                    {isExpanded && (
+                      <CardContent className="pt-0">
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Units
+                            </label>
+                            {isOptional ? (
+                              <input
+                                type="number"
+                                min="0"
+                                value={tool.nodesUnitsSupported}
+                                onChange={(e) => updateVariableTool(tool.id, { nodesUnitsSupported: parseInt(e.target.value) || 0 })}
+                                className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+                              />
+                            ) : (
+                              <div className="w-full px-2 py-1 text-sm text-gray-600 bg-gray-100 rounded border">
+                                {tool.nodesUnitsSupported || 0}
+                              </div>
+                            )}
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Cost/Unit
+                            </label>
+                            <div className="w-full px-2 py-1 text-sm text-gray-600 bg-gray-100 rounded border">
+                              {tool.costPerNodeUnit ? formatCurrency(tool.costPerNodeUnit) : 
+                               tool.costPerCustomer ? formatCurrency(tool.costPerCustomer) : '-'}
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Extended Cost
+                            </label>
+                            <div className="w-full px-2 py-1 text-sm text-gray-600 bg-gray-100 rounded border">
+                              {formatCurrency(tool.extendedCost)}
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Price/Unit
+                            </label>
+                            <div className="w-full px-2 py-1 text-sm text-gray-600 bg-gray-100 rounded border">
+                              {tool.pricePerNodeUnit ? formatCurrency(tool.pricePerNodeUnit) : '-'}
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Extended Price
+                            </label>
+                            <div className="w-full px-2 py-1 text-sm font-medium text-gray-900 bg-gray-100 rounded border">
+                              {formatCurrency(tool.extendedPrice)}
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Margin %
+                            </label>
+                            <div className="w-full px-2 py-1 text-sm text-gray-600 bg-gray-100 rounded border">
+                              {formatPercent(tool.margin)}
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    )}
+                  </Card>
+                )
+              })}
+
+              {/* Mobile Add Custom Item Form */}
+              {showAddForm && (
+                <Card className="border-2 border-blue-200 bg-blue-50">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm">Add Custom Item</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Tool Name
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="Custom tool name"
+                          value={newItemName}
+                          onChange={(e) => setNewItemName(e.target.value)}
+                          className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+                        />
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Units
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            value={newItemQuantity}
+                            onChange={(e) => setNewItemQuantity(e.target.value)}
+                            className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+                            placeholder="1"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Cost/Unit
+                          </label>
+                          <input
+                            type="number"
+                            placeholder="0.00"
+                            step="0.01"
+                            min="0"
+                            value={newItemCost}
+                            onChange={(e) => setNewItemCost(e.target.value)}
+                            className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Price/Unit
+                          </label>
+                          <input
+                            type="number"
+                            placeholder="0.00"
+                            step="0.01"
+                            min="0"
+                            value={newItemPrice}
+                            onChange={(e) => setNewItemPrice(e.target.value)}
+                            className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Extended Price
+                          </label>
+                          <div className="w-full px-2 py-1 text-sm text-gray-600 bg-gray-100 rounded border">
+                            {formatCurrency((parseInt(newItemQuantity) || 0) * (parseFloat(newItemPrice) || 0))}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex justify-end gap-2 pt-2">
+                        <button
+                          onClick={() => {
+                            setShowAddForm(false)
+                            setNewItemName('')
+                            setNewItemCost('')
+                            setNewItemPrice('')
+                            setNewItemQuantity('1')
+                          }}
+                          className="px-3 py-2 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded transition-colors"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={addCustomItem}
+                          disabled={!newItemName.trim() || !newItemCost || !newItemPrice || !newItemQuantity}
+                          className="px-3 py-2 text-sm bg-blue-600 text-white hover:bg-blue-700 disabled:bg-gray-400 rounded transition-colors"
+                        >
+                          Add Item
+                        </button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Mobile Add Button */}
+              <button
+                onClick={() => setShowAddForm(true)}
+                className="w-full flex items-center justify-center gap-2 py-3 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-50 border border-gray-300 border-dashed rounded-lg transition-colors"
+              >
+                <Plus size={16} />
+                Add Custom Item
+              </button>
             </div>
           </CardContent>
         </Card>

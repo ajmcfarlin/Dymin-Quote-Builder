@@ -174,13 +174,6 @@ export function OtherLaborSelector({ otherLaborData, onChange, supportLaborTotal
               Add Custom Labor Item
             </button>
           )}
-
-          {(otherLaborData?.customItems || []).length === 0 && !showAddForm && (
-            <div className="text-center py-6 text-gray-500">
-              <p>No custom labor items added yet.</p>
-              <p className="text-sm">Click "Add Custom Labor Item" to get started.</p>
-            </div>
-          )}
         </CardContent>
       </Card>
     </div>

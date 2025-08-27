@@ -35,8 +35,8 @@ async function getDashboardStats() {
     throw new Error('User not found')
   }
 
-  // Build where clause - show all quotes for admin users, only own quotes for others
-  const whereClause = user.role === 'admin' ? {} : { userId: user.id }
+  // Build where clause - show all quotes for all authenticated users
+  const whereClause = {}
 
   // Get current month and previous month dates
   const now = new Date()
