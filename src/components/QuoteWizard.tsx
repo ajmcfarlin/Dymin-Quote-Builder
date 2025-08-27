@@ -24,10 +24,18 @@ export function QuoteWizard({ readOnly = false, editMode = false, quoteId }: Quo
   const { currentStep, currentMonthlyTab, quoteSummaryExpanded, setCurrentStep, setCurrentMonthlyTab, setQuoteSummaryExpanded } = useQuoteUI()
 
   const scrollToTop = () => {
-    // Find the main scrollable container and scroll it to top
+    // Check if main element is scrollable (has overflow auto/scroll)
     const mainElement = document.querySelector('main')
     if (mainElement) {
-      mainElement.scrollTo({ top: 0, behavior: 'smooth' })
+      const computedStyle = window.getComputedStyle(mainElement)
+      const isScrollable = computedStyle.overflow === 'auto' || computedStyle.overflow === 'scroll' ||
+                          computedStyle.overflowY === 'auto' || computedStyle.overflowY === 'scroll'
+      
+      if (isScrollable) {
+        mainElement.scrollTo({ top: 0, behavior: 'smooth' })
+      } else {
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+      }
     } else {
       // Fallback to window scroll
       window.scrollTo({ top: 0, behavior: 'smooth' })

@@ -29,6 +29,12 @@ export function ReviewDiscountTab({ calculations, customer, supportDevices, mont
   const router = useRouter()
   const { initialQuote } = useQuote()
 
+  const handleNumberInputFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    if (e.target.value === '0') {
+      e.target.select()
+    }
+  }
+
   // Load existing discount values in edit mode
   React.useEffect(() => {
     if (editMode && initialQuote) {
@@ -251,7 +257,8 @@ export function ReviewDiscountTab({ calculations, customer, supportDevices, mont
         const updatedQuote = await QuoteAPI.updateQuote(updateRequest)
         
         toast.success('Quote updated successfully!')
-        router.push(`/dashboard/quotes/${updatedQuote.id}`)
+        // Force a full page reload to refresh server-side data
+        window.location.href = `/dashboard/quotes/${updatedQuote.id}`
       } else {
         // Create new quote
         const request = stateToCreateQuoteRequest(quoteState, discountInfo)
@@ -308,6 +315,7 @@ export function ReviewDiscountTab({ calculations, customer, supportDevices, mont
                 max={(['percentage', 'margin_override'].includes(discountType)) ? '100' : undefined}
                 value={discountValue}
                 onChange={(e) => setDiscountValue(parseFloat(e.target.value) || 0)}
+                onFocus={handleNumberInputFocus}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder={
                   discountType === 'percentage' ? '10.0' :
